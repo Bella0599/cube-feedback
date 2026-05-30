@@ -10,8 +10,8 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🏫 큐브어학원 월말평가 시스템 v9.0")
-st.markdown("영어 이름 중심의 편리한 검색과 고품격 어학원 전용 피드백을 생성합니다.")
+st.title("🏫 큐브어학원 월말평가 시스템 v11.0")
+st.markdown("학부모님의 신뢰를 높이는 '긍정 선행-약점 최소화' 샌드위치 리포트 시스템")
 st.divider()
 
 # --- 1. 구글 시트 데이터 불러오기 ---
@@ -82,7 +82,7 @@ DIAGNOSIS_DB = {
 TRAITS_LIST = [
     "자기주도적 학습 능력이 뛰어나며 과제 완성도가 매우 높습니다.",
     "이론적인 이해도는 높으나 문제 풀이 시 세심한 주의가 조금 더 필요합니다.",
-    "스피킹และ 리스닝에서 탁월한 감각을 보이며 능동적으로 수업에 참여합니다.",
+    "스피킹과 리스닝에서 탁월한 감각을 보이며 능동적으로 수업에 참여합니다.",
     "영어 쓰기(Writing) 시 문장 구조 파악 능력이 뛰어나고 창의적입니다.",
     "수업 시간 질문이 많고 호기심이 왕성하여 학습 속도가 빠릅니다.",
     "조용하지만 내실이 탄탄하며, 배운 내용을 자기 것으로 만드는 힘이 좋습니다.",
@@ -92,6 +92,33 @@ TRAITS_LIST = [
     "학습 태도가 매우 성실하며 틀린 문제를 끝까지 해결하려는 끈기가 돋보입니다."
 ]
 
+# --- 💡 [스마트 필터 업그레이드] 약점을 매우 작게 만들고 솔루션과 결합하는 로직 ---
+def refine_teacher_feedback(raw_text, name):
+    if not raw_text:
+        return ""
+        
+    refined_sentences = []
+    
+    # 키워드를 발견하면, 단점을 최소화(쿠션어)하고 학원의 보완법을 즉시 제시
+    if any(kw in raw_text for kw in ["단어", "어휘", "스펠링", "Voca"]):
+        refined_sentences.append("현재 성취도가 훌륭한 만큼 단어 암기에 아주 조금만 더 시간을 투자하여 깊이를 더해간다면, 앞으로 독해력과 영작 표현력이 무서울 정도로 정교해질 것입니다. 학원에서도 1:1 밀착 점검을 통해 아이가 어휘 암기에 성취감을 느끼도록 가볍게 당겨주겠습니다.")
+    if any(kw in raw_text for kw in ["숙제", "과제", "홈워크"]):
+        refined_sentences.append("가끔 과제에서 한두 군데 놓치는 귀여운 실수가 발견되기도 합니다. 한 단계 더 높은 자기주도적 성장을 위해, 학원 수업 전 숙제 상태를 먼저 상냥하게 더블 체크하고 꼼꼼히 완수하는 습관을 완벽하게 빌드업하겠습니다.")
+    if any(kw in raw_text for kw in ["집중", "산만", "장난", "떠듦"]):
+        refined_sentences.append("주변 환경이나 친구들에게 워낙 호기심과 에너지가 넘치다 보니, 간혹 시선이 분산되는 순간이 있습니다. 수업 시간의 높은 몰입도를 끝까지 유지할 수 있도록 눈맞춤 질문과 밀착 케어로 아이의 집중 페이스를 예쁘게 조절해 가겠습니다.")
+    if any(kw in raw_text for kw in ["글씨", "알파벳", "대소문자"]):
+        refined_sentences.append("글씨를 써 내려갈 때 조금만 더 차분함을 더한다면, 사소한 실수를 완벽하게 제로(0)로 만들 수 있습니다. 작성 후 스스로 한번 되짚어 보는 검토(Proofreading) 루틴을 자연스럽게 훈련시키겠습니다.")
+    if any(kw in raw_text for kw in ["속도", "느림", "시간"]):
+        refined_sentences.append("문제를 풀거나 과제를 할 때 진중함이 돋보이나, 실전에서의 템포를 조금만 더 리드미컬하게 당겨준다면 본인의 진짜 실력을 제한 시간 내에 막힘없이 100% 쏟아낼 수 있도록 타임 매니지먼트 클리닉을 병행하겠습니다.")
+    
+    if refined_sentences:
+        return " ".join(refined_sentences)
+    else:
+        if len(raw_text) <= 15 and not raw_text.endswith((".", "요", "다")):
+            return f"현재 진행 중인 학습 과정에서 '{raw_text}'라는 작은 디테일적 보완점이 관찰되었습니다. 우리 {name}의 뛰어난 잠재력을 알기에, 학원에서도 이 부분을 놓치지 않고 1:1로 섬세하게 터치하여 완벽한 성장을 이끌어 내겠습니다."
+        else:
+            return f"{raw_text}\n이처럼 관찰된 사소한 틈새들은 {name}가 더 완벽한 영어 날개를 달기 위한 기분 좋은 성장통이라 생각합니다. 학원에서도 촘촘하게 1:1로 맞춤 지도하여 자신감을 꽉 채워 주겠습니다."
+
 # --- 3. 사용자 입력 화면 ---
 st.subheader("👤 1. 학생 선택")
 col1, col2 = st.columns(2)
@@ -99,12 +126,9 @@ with col1:
     levels = df['레벨'].unique().tolist()
     selected_level = st.selectbox("현재 레벨", levels)
 with col2:
-    # 💡 [업그레이드] 영어이름 (한국어이름) 연동 레이블 생성
     filtered_df = df[df['레벨'] == selected_level].copy()
     filtered_df['student_label'] = filtered_df['영어이름'].fillna('이름없음').astype(str) + " (" + filtered_df['한국어이름'].astype(str) + ")"
     student_list = filtered_df['student_label'].tolist()
-    
-    # 선생님들이 영어로 치든, 한글로 치든 둘 다 검색창에서 자동 필터링됩니다.
     selected_student = st.selectbox("학생 선택 (영어 또는 한글 이름 검색 가능)", student_list)
 
 selected_en_name = ""
@@ -181,7 +205,7 @@ for area in analysis_areas:
 
 st.subheader("🌟 5. 학생 성향 및 강사 추가 의견")
 selected_traits = st.multiselect("평소 관찰된 아이의 긍정적 성향 (복수 선택)", TRAITS_LIST)
-teacher_custom_feedback = st.text_area("선생님 개별 코멘트 (자유 기재)", placeholder="예: '단어가 약함'이라고 적으셔도 따뜻한 서술형 문장으로 자동 업그레이드됩니다.")
+teacher_custom_feedback = st.text_area("선생님 개별 코멘트 (자유 기재)", placeholder="예: '단어약함', '숙제안해옴' 이라고 적으시면 원문 노출 없이 예쁜 문장으로 자동 변환됩니다.")
 
 # --- 4. 피드백 메세지 생성 로직 ---
 if st.button("✨ 큐브어학원 맞춤 분석 피드백 생성"):
@@ -196,62 +220,20 @@ if st.button("✨ 큐브어학원 맞춤 분석 피드백 생성"):
             sub_units_str = ", ".join(sub_units) if sub_units else "전체 범위"
             score_report += f"\n· {sub_book} ({sub_units_str}) : {sub_score}점 / 100점"
         
-        # 2) 학습 태도 문장
+        # 2) 칭찬 키워드 및 학습 태도 문장 조립 (긍정 선행)
         u_sentence = UNDERSTAND_TEXTS[rating_understand]
         p_sentence = PRESENT_TEXTS[rating_present]
         f_sentence = FOCUS_TEXTS[rating_focus]
         
-        # 3) 영역별 진단 문장 (영어 이름 중심)
-        diagnosis_text = ""
-        if selected_weaknesses:
-            diagnosis_text = f"\n이와 더불어, 이번 달 학업 성취도를 정밀 진단한 결과와 이에 따른 큐브어학원의 개별 성장 플랜을 안내해 드립니다.\n"
-            for area, weaknesses in selected_weaknesses.items():
-                for w in weaknesses:
-                    plan = DIAGNOSIS_DB[area][w]
-                    diagnosis_text += f"· 현재 {selected_en_name}는 {area} 영역의 **[{w}]** 부분에서 다소 보완이 필요한 단계로 파악되었습니다. 이를 완벽히 다지기 위해 학원에서는 **{plan}**\n"
-        
-        # 4) 성향 리스트 결합 (영어 이름 중심)
         traits_text = ""
         if selected_traits:
-            traits_text = f"\n평소 학원에서 지켜본 {selected_en_name}는 " + " ".join(selected_traits) + "\n"
+            traits_text = f"특히 {selected_en_name}는 평소 학원에서 " + " ".join(selected_traits) + "\n"
 
-        # 5) 선생님의 개별 피드백 문맥 긍정 자동화 로직
-        custom_processed_text = ""
-        if teacher_custom_feedback:
-            raw_feedback = teacher_custom_feedback.strip()
-            custom_processed_text = f"""
-[담당 강사 개별 관찰 소견]
-이번 달 {selected_en_name}를 근거리에서 밀착 지도하며 선생님이 느낀 점을 덧붙여 드립니다.
-"{raw_feedback}"
-이와 같이 피드백된 지점들은 아이가 더 크게 성장하기 위한 소중한 디딤돌이라 생각합니다. 부족함에 머무르지 않고, 지적된 학습적 디테일들을 하나씩 바르게 고쳐나갈 수 있도록 학원에서도 1:1로 끈기 있게 격려하며 이끌어 가겠습니다.
-"""
-        else:
-            custom_processed_text = f"\n[담당 강사 개별 관찰 소견]\n우리 {selected_en_name}는 매 수업 긍정적인 에너지를 바탕으로 학원 생활에 예쁘게 적응하며 기특하게 성장하고 있습니다.\n"
-
-        # 6) 💡 [핵심 업그레이드] 영어 이름 전면 배치 알림장 템플릿
-        feedback_msg = f"""
-안녕하세요, {selected_en_name} 학부모님! 😊
-큐브어학원에서 이번 한 달간 {selected_en_name}({selected_kr_name}) 학생과 함께 힘차게 달려온 학습 여정과 그 성장을 담은 월말평가 결과를 전해드립니다.
-
-■ 현재 레벨: {selected_level}
-■ 학생 이름: {selected_en_name} ({selected_kr_name})
-■ 영역별 평가 결과 (100점 만점 기준):
-{score_report}
-
-[학습 태도 및 몰입도 리포트]
-이번 한 달 동안 학원에서 관찰한 {selected_en_name}의 학습 다이어리입니다.
-- {u_sentence}
-- {p_sentence}
-- {f_sentence}
-{traits_text}{diagnosis_text}{custom_processed_text}
-선생님들이 신뢰 어린 시선으로 바라본 {selected_en_name}는 앞으로 채워나갈 가능성과 잠재력이 무궁무진한 아이입니다. 이번 평가에서 발견된 우리 아이의 탄탄한 강점은 아낌없이 칭찬해 키워내고, 다소 아쉬웠던 빈틈은 큐브만의 촘촘한 개별 케어 시스템을 통해 확실하게 메워 나가겠습니다.
-
-가정에서도 영어의 날개를 달아가는 {selected_en_name}에게 아낌없는 격려와 따뜻한 칭찬의 말씀 한마디 부탁드립니다. 큐브어학원 역시 언제나 아이의 성장을 가장 가까이서 책임감 있게 지도하겠습니다.
-
-감사합니다.
-
-- 큐브어학원 드림 -
-        """
+        # 3) 💡 [구조 혁신] 보완점 소형화 + 학원 보완 솔루션 결합 문장 생성
+        care_plan_text = ""
         
-        st.success("큐브어학원만의 고품격 피드백 메세지가 생성되었습니다!")
-        st.text_area("완성된 피드백 (카톡/문자 전송용)", value=feedback_msg.strip(), height=650)
+        # (A) 정밀 진단 DB 영역 보완 플랜
+        if selected_weaknesses:
+            for area, weaknesses in selected_weaknesses.items():
+                for w in weaknesses:
+                    plan = DIAGNOSIS_DB[area]
