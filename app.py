@@ -17,7 +17,7 @@ st.divider()
 # --- 1. 구글 시트 데이터 불러오기 ---
 sheet_url = "https://docs.google.com/spreadsheets/d/1xwfmM8VELPoMktF7pZugYZxSbf8SCSGo2Ur7DIFCT9E/edit?usp=sharing" 
 try:
-    csv_url = sheet_url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=학생명단"
+    csv_url = sheet_url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
     df = pd.read_csv(csv_url)
     df = df.dropna(subset=['레벨', '한국어이름'])
 except:
