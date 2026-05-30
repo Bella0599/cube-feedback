@@ -19,10 +19,10 @@ st.divider()
 
 # --- 2. 구글 시트 데이터 불러오기 (치트키 주소 방식) ---
 # 원장님의 실제 시트 주소를 아래 큰따옴표 안에 넣어주세요.
-sheet_url = "https://docs.google.com/spreadsheets/d/1xfm...원장님의_실제_주소" 
+sheet_url = "https://docs.google.com/spreadsheets/d/1xwfmM8VELPoMktF7pZugYZxSbf8SCSGo2Ur7DIFCT9E/edit?usp=sharing" 
 
 try:
-    csv_url = sheet_url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=학생명단"
+    csv_url = sheet_url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
     df = pd.read_csv(csv_url)
     df = df.dropna(subset=['레벨', '한국어이름'])
 except:
