@@ -1,23 +1,29 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 
-st.set_page_config(page_title="월말평가 시스템", page_icon="🏫", layout="centered")
-st.title("🏫 [v4.1] 레벨별 맞춤형 교재 선택 시스템")
-st.markdown("파닉스반은 안전하게 자동화하고, 상위 반은 유연하게 선택합니다.")
+# --- 앱 기본 설정 ---
+st.set_page_config(page_title="월말평가 피드백 시스템", page_icon="🏫", layout="centered")
+st.title("🏫 학원 월말평가 피드백 자동화")
 st.divider()
 
-# 1. 구글 시트에서 데이터 불러오기
-conn = st.connection("gsheets", type=GSheetsConnection)
-df = conn.read(worksheet="시트1", ttl="10m") 
-df = df.dropna(subset=['레벨', '한국어이름']) 
+# --- 1. 구글 시트 데이터 불러오기 ---
+try:
+    conn = st.connection("gsheets", type=GSheetsConnection)
+    # 아래 "학생명단"이 구글 시트 탭 이름과 정확히 같아야 합니다.
+    df = conn.read(worksheet="학생명단", ttl="10m") 
+    df = df.dropna(subset=['레벨', '한국어이름']) 
+except Exception as e:
+    st.error("구글 시트를 불러오는 데 실패했습니다. 스트림릿 설정(Secrets)에 링크가 잘 들어갔는지 확인해 주세요.")
+    st.stop()
 
-# 📚 학원 교재 목록 정의 (필요시 언제든 수정 가능)
+# --- 교재 리스트 정의 ---
 PHONICS_BOOKS = ["Smart Phonics 1", "Smart Phonics 2", "Smart Phonics 3", "Phonics Monster"]
 REGULAR_BOOKS = [
     "Bricks Reading 100", "Subject Link 1", "Grammar Space Beginner", 
     "Toefl Primary Step 1", "Reading Expert 1", "Grammar Zone", "Listening Expert"
 ]
 
+# --- 2. 학생 및 레벨 선택 ---
 st.subheader("1. 학생 및 레벨 선택")
 col1, col2 = st.columns(2)
 
@@ -32,29 +38,28 @@ with col2:
 
 selected_en_name = ""
 if selected_kr_name:
-    en_name_row = filtered_df[filtered_df['한국어이름'] == selected_kr_name]['영어 이름'].values
+    # '영어이름' 열에서 데이터 가져오기
+    en_name_row = filtered_df[filtered_df['한국어이름'] == selected_kr_name]['영어이름'].values
     if len(en_name_row) > 0:
         selected_en_name = en_name_row[0]
 
-# ⚙️ 교재 필터링 로직 핵심 파트
+# --- 3. 학습 및 평가 결과 ---
 st.subheader("2. 학습 및 평가 결과")
 
-# 선택된 레벨 이름에 'Phonics'가 포함되어 있는지 판별
 if "Phonics" in selected_level:
-    main_book_options = PHONICS_BOOKS
-    sub_book_options = ["(파닉스는 메인 교재만 진행)"]
+    main_books = PHONICS_BOOKS
+    sub_books = ["(파닉스는 메인 교재만 진행)"]
     sub_disabled = True
 else:
-    # 파닉스반이 아니면 모든 일반 교재 목록을 다 보여주고 선택하게 함
-    main_book_options = REGULAR_BOOKS
-    sub_book_options = ["없음"] + REGULAR_BOOKS
+    main_books = REGULAR_BOOKS
+    sub_books = ["없음"] + REGULAR_BOOKS
     sub_disabled = False
 
 col_b1, col_b2 = st.columns(2)
 with col_b1:
-    book1 = st.selectbox("메인 학습 교재", main_book_options)
+    book1 = st.selectbox("메인 학습 교재", main_books)
 with col_b2:
-    book2 = st.selectbox("부교재 (선택)", sub_book_options, disabled=sub_disabled)
+    book2 = st.selectbox("부교재 (선택)", sub_books, disabled=sub_disabled)
 
 units = st.text_input("평가 단원", placeholder="예: Unit 1 ~ Unit 3")
 
@@ -64,6 +69,7 @@ with col_s1:
 with col_s2:
     avg_score = st.text_input("반 평균 점수", placeholder="예: 78점")
 
+# --- 4. 강사 관찰 및 세부 분석 ---
 st.subheader("3. 강사 관찰 및 세부 분석")
 traits = st.multiselect(
     "아이의 학습 특성 (복수 선택)",
@@ -78,6 +84,7 @@ traits = st.multiselect(
 weak_points = st.text_area("틀린 부분 및 취약점", placeholder="예: 과거시제 불규칙 동사 변화를 헷갈려 함")
 custom_comment = st.text_area("선생님 추가 코멘트", placeholder="예: 다음 학기에는 영작 연습 비중을 늘리겠습니다.")
 
+# --- 5. 피드백 생성 버튼 ---
 if st.button("✨ 전문 피드백 자동 작성하기", type="primary"):
     if not selected_kr_name:
         st.error("학생을 선택해주세요!")
