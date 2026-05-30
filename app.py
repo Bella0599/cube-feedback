@@ -10,8 +10,8 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🏫 큐브어학원 월말평가 시스템 v11.0")
-st.markdown("학부모님의 신뢰를 높이는 '긍정 선행-약점 최소화' 샌드위치 리포트 시스템")
+st.title("🏫 큐브어학원 월말평가 시스템")
+st.markdown("학부모 안내문 자동화")
 st.divider()
 
 # --- 1. 구글 시트 데이터 불러오기 ---
