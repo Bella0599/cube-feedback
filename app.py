@@ -10,8 +10,8 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🏫 큐브어학원 월말평가 시스템 v7.0")
-st.markdown("강사의 정교한 관찰을 따뜻하고 전문적인 문장으로 디자인합니다.")
+st.title("🏫 큐브어학원 월말평가 시스템 v9.0")
+st.markdown("영어 이름 중심의 편리한 검색과 고품격 어학원 전용 피드백을 생성합니다.")
 st.divider()
 
 # --- 1. 구글 시트 데이터 불러오기 ---
@@ -38,7 +38,6 @@ BOOK2_LIST = [
 ]
 UNITS = [f"Unit {i}" for i in range(1, 13)]
 
-# 📊 [선택 답변별 맞춤형 문장 DB] 상중하 선택에 따라 아래 문장들이 조합됩니다.
 UNDERSTAND_TEXTS = {
     "상 (Excellent)": "새로운 언어적 개념과 핵심 논리를 받아들이는 이해도가 매우 뛰어나, 진도가 막힘없이 매끄럽게 진행되고 있습니다.",
     "중 (Good)": "수업 내용을 차분하게 잘 따라오고 있으며, 지도를 통해 기본적인 개념을 안정적으로 소화해 나가고 있습니다.",
@@ -57,7 +56,6 @@ FOCUS_TEXTS = {
     "하 (Needs Effort)": "간혹 집중력이 흐려지는 순간이 관찰되어, 1:1 대면 질문과 밀착 케어를 통해 주의를 환기시키고 있습니다."
 }
 
-# 🔍 [영역별 진단 및 자연스러운 문장 결합 DB]
 DIAGNOSIS_DB = {
     "Phonics (파닉스)": {
         "단모음/장모음 규칙 헷갈림": "비슷한 발음의 단어들을 직접 짝지어 소리 내어 읽고 비교하는 클리닉을 통해 모음 규칙을 완벽히 체화시키겠습니다.",
@@ -76,7 +74,7 @@ DIAGNOSIS_DB = {
     },
     "Writing (영작)": {
         "대소문자 및 문장 부호(마침표 등) 누락": "글쓰기의 기본인 문장 부호 규칙을 강조하고, 작성을 마친 문장을 스스로 피드백하며 정교함을 기르도록 세심히 지도하겠습니다.",
-        "배운 문법을 활용한 영작 시 실수": "규칙의 단순 암기에 그치지 않고, 배운 문법 공식을 대입해 본인만의 실전 문장을 직접 구성해보는 응용 라이팅 비중을 늘리겠습니다.",
+        "배운 문법을 활용한 영작 시 실수": "규칙의 단순 암기에 한정되지 않고, 배운 문법 공식을 대입해 본인만의 실전 문장을 직접 구성해보는 응용 라이팅 비중을 늘리겠습니다.",
         "단어 스펠링(철자) 오류": "파닉스 연계 규칙을 활용해 소리를 철자로 유추하는 능력과 함께, 단어장 누적 복습을 통해 어휘의 정확성을 탄탄하게 보완하겠습니다."
     }
 }
@@ -84,7 +82,7 @@ DIAGNOSIS_DB = {
 TRAITS_LIST = [
     "자기주도적 학습 능력이 뛰어나며 과제 완성도가 매우 높습니다.",
     "이론적인 이해도는 높으나 문제 풀이 시 세심한 주의가 조금 더 필요합니다.",
-    "스피킹과 리스닝에서 탁월한 감각을 보이며 능동적으로 수업에 참여합니다.",
+    "스피킹และ 리스닝에서 탁월한 감각을 보이며 능동적으로 수업에 참여합니다.",
     "영어 쓰기(Writing) 시 문장 구조 파악 능력이 뛰어나고 창의적입니다.",
     "수업 시간 질문이 많고 호기심이 왕성하여 학습 속도가 빠릅니다.",
     "조용하지만 내실이 탄탄하며, 배운 내용을 자기 것으로 만드는 힘이 좋습니다.",
@@ -101,32 +99,58 @@ with col1:
     levels = df['레벨'].unique().tolist()
     selected_level = st.selectbox("현재 레벨", levels)
 with col2:
-    filtered_df = df[df['레벨'] == selected_level]
-    student_list = filtered_df['한국어이름'].tolist()
-    selected_kr_name = st.selectbox("학생 이름", student_list)
+    # 💡 [업그레이드] 영어이름 (한국어이름) 연동 레이블 생성
+    filtered_df = df[df['레벨'] == selected_level].copy()
+    filtered_df['student_label'] = filtered_df['영어이름'].fillna('이름없음').astype(str) + " (" + filtered_df['한국어이름'].astype(str) + ")"
+    student_list = filtered_df['student_label'].tolist()
+    
+    # 선생님들이 영어로 치든, 한글로 치든 둘 다 검색창에서 자동 필터링됩니다.
+    selected_student = st.selectbox("학생 선택 (영어 또는 한글 이름 검색 가능)", student_list)
 
 selected_en_name = ""
-if selected_kr_name:
-    en_row = filtered_df[filtered_df['한국어이름'] == selected_kr_name]['영어이름'].values
-    selected_en_name = en_row[0] if len(en_row) > 0 else ""
+selected_kr_name = ""
+if selected_student:
+    row = filtered_df[filtered_df['student_label'] == selected_student].iloc[0]
+    selected_en_name = row['영어이름']
+    selected_kr_name = row['한국어이름']
 
-st.subheader("📚 2. 교재 및 평가 범위")
-col3, col4 = st.columns(2)
-with col3:
-    if "Phonics" in selected_level:
+# --- 교재별 성적 및 단원 입력 ---
+st.subheader("📚 2. 교재별 성적표 입력 (100점 만점 기준)")
+
+if "Phonics" in selected_level:
+    col_m1, col_m2, col_m3 = st.columns([2, 2, 1])
+    with col_m1:
         main_book = st.selectbox("학습 교재", PHONICS_BOOKS)
-        sub_book = None
-    else:
-        main_book = st.selectbox("Main Book", BOOK1_LIST)
-with col4:
-    if "Phonics" in selected_level:
-        st.info("파닉스반은 단권 진행")
-        sub_book = None
-    else:
-        sub_book = st.selectbox("Sub Book", ["선택안함"] + BOOK2_LIST)
-
-selected_units = st.multiselect("평가 단원", UNITS)
-score = st.text_input("평가 점수", placeholder="예: 95점 / 100점")
+    with col_m2:
+        main_units = st.multiselect("평가 단원", UNITS, key="main_unit")
+    with col_m3:
+        main_score = st.text_input("점수", placeholder="예: 90", key="main_score")
+    sub_book, sub_units, sub_score = None, [], ""
+else:
+    st.markdown("**[Main Book 성적]**")
+    col_m1, col_m2, col_m3 = st.columns([2, 2, 1])
+    with col_m1:
+        main_book = st.selectbox("교재 선택", BOOK1_LIST, key="reg_main")
+    with col_m2:
+        main_units = st.multiselect("평가 단원", UNITS, key="reg_main_unit")
+    with col_m3:
+        main_score = st.text_input("점수", placeholder="예: 85", key="reg_main_score")
+        
+    st.markdown("**[Sub Book 성적]**")
+    col_s1, col_s2, col_s3 = st.columns([2, 2, 1])
+    with col_s1:
+        sub_book = st.selectbox("교재 선택", ["선택안함"] + BOOK2_LIST, key="reg_sub")
+    with col_s2:
+        if sub_book != "선택안함":
+            sub_units = st.multiselect("평가 단원", UNITS, key="reg_sub_unit")
+        else:
+            sub_units = []
+            st.write("부교재 없음")
+    with col_s3:
+        if sub_book != "선택안함":
+            sub_score = st.text_input("점수", placeholder="예: 80", key="reg_sub_score")
+        else:
+            sub_score = ""
 
 st.subheader("📊 3. 학습 태도 분석")
 col5, col6, col7 = st.columns(3)
@@ -156,59 +180,73 @@ for area in analysis_areas:
         selected_weaknesses[area] = selected
 
 st.subheader("🌟 5. 학생 성향 및 강사 추가 의견")
-selected_traits = st.multiselect("평소 관찰된 아이의 긍정적 성향 (복수 선택 가능)", TRAITS_LIST)
-teacher_custom_feedback = st.text_area("선생님 개별 코멘트 (자유 기재)", placeholder="아이의 특별한 에피소드나 칭찬을 적어주시면 편지가 더욱 풍성해집니다.")
+selected_traits = st.multiselect("평소 관찰된 아이의 긍정적 성향 (복수 선택)", TRAITS_LIST)
+teacher_custom_feedback = st.text_area("선생님 개별 코멘트 (자유 기재)", placeholder="예: '단어가 약함'이라고 적으셔도 따뜻한 서술형 문장으로 자동 업그레이드됩니다.")
 
 # --- 4. 피드백 메세지 생성 로직 ---
 if st.button("✨ 큐브어학원 맞춤 분석 피드백 생성"):
-    if not selected_kr_name:
+    if not selected_student:
         st.error("학생을 선택해 주세요.")
     else:
-        units_str = ", ".join(selected_units)
-        books_str = main_book if not sub_book or sub_book == "선택안함" else f"{main_book}, {sub_book}"
+        # 1) 성적표 문자열 조립
+        main_units_str = ", ".join(main_units) if main_units else "전체 범위"
+        score_report = f"· {main_book} ({main_units_str}) : {main_score}점 / 100점"
         
-        # 1) 학습 태도 서사형 문장 조합
+        if sub_book and sub_book != "선택안함":
+            sub_units_str = ", ".join(sub_units) if sub_units else "전체 범위"
+            score_report += f"\n· {sub_book} ({sub_units_str}) : {sub_score}점 / 100점"
+        
+        # 2) 학습 태도 문장
         u_sentence = UNDERSTAND_TEXTS[rating_understand]
         p_sentence = PRESENT_TEXTS[rating_present]
         f_sentence = FOCUS_TEXTS[rating_focus]
         
-        # 2) 진단 및 케어 방향성 문장 조합
+        # 3) 영역별 진단 문장 (영어 이름 중심)
         diagnosis_text = ""
         if selected_weaknesses:
             diagnosis_text = f"\n이와 더불어, 이번 달 학업 성취도를 정밀 진단한 결과와 이에 따른 큐브어학원의 개별 성장 플랜을 안내해 드립니다.\n"
             for area, weaknesses in selected_weaknesses.items():
                 for w in weaknesses:
                     plan = DIAGNOSIS_DB[area][w]
-                    # 딱딱한 양식이 아니라 서술형으로 자연스럽게 결합
-                    diagnosis_text += f"· 현재 {selected_kr_name}는 {area} 영역의 **[{w}]** 부분에서 다소 보완이 필요한 단계로 파악되었습니다. 이를 완벽히 다지기 위해 학원에서는 **{plan}**\n"
+                    diagnosis_text += f"· 현재 {selected_en_name}는 {area} 영역의 **[{w}]** 부분에서 다소 보완이 필요한 단계로 파악되었습니다. 이를 완벽히 다지기 위해 학원에서는 **{plan}**\n"
         
-        # 3) 성향 리스트 결합
+        # 4) 성향 리스트 결합 (영어 이름 중심)
         traits_text = ""
         if selected_traits:
-            traits_text = f"\n평소 학원에서 지켜본 {selected_kr_name}는 " + " ".join(selected_traits) + "\n"
+            traits_text = f"\n평소 학원에서 지켜본 {selected_en_name}는 " + " ".join(selected_traits) + "\n"
 
-        # 4) 전체 프리미엄 피드백 템플릿 완성
+        # 5) 선생님의 개별 피드백 문맥 긍정 자동화 로직
+        custom_processed_text = ""
+        if teacher_custom_feedback:
+            raw_feedback = teacher_custom_feedback.strip()
+            custom_processed_text = f"""
+[담당 강사 개별 관찰 소견]
+이번 달 {selected_en_name}를 근거리에서 밀착 지도하며 선생님이 느낀 점을 덧붙여 드립니다.
+"{raw_feedback}"
+이와 같이 피드백된 지점들은 아이가 더 크게 성장하기 위한 소중한 디딤돌이라 생각합니다. 부족함에 머무르지 않고, 지적된 학습적 디테일들을 하나씩 바르게 고쳐나갈 수 있도록 학원에서도 1:1로 끈기 있게 격려하며 이끌어 가겠습니다.
+"""
+        else:
+            custom_processed_text = f"\n[담당 강사 개별 관찰 소견]\n우리 {selected_en_name}는 매 수업 긍정적인 에너지를 바탕으로 학원 생활에 예쁘게 적응하며 기특하게 성장하고 있습니다.\n"
+
+        # 6) 💡 [핵심 업그레이드] 영어 이름 전면 배치 알림장 템플릿
         feedback_msg = f"""
-안녕하세요, {selected_kr_name}({selected_en_name}) 학부모님! 😊
-큐브어학원에서 이번 한 달간 {selected_kr_name}와(과) 함께 힘차게 달려온 학습 여정과 그 성장을 담은 월말평가 결과를 전해드립니다.
+안녕하세요, {selected_en_name} 학부모님! 😊
+큐브어학원에서 이번 한 달간 {selected_en_name}({selected_kr_name}) 학생과 함께 힘차게 달려온 학습 여정과 그 성장을 담은 월말평가 결과를 전해드립니다.
 
 ■ 현재 레벨: {selected_level}
-■ 학습 교재: {books_str}
-■ 평가 범위: {units_str}
-■ 평가 점수: {score}
+■ 학생 이름: {selected_en_name} ({selected_kr_name})
+■ 영역별 평가 결과 (100점 만점 기준):
+{score_report}
 
 [학습 태도 및 몰입도 리포트]
-이번 한 달 동안 학원에서 관찰한 {selected_kr_name}의 학습 다이어리입니다.
+이번 한 달 동안 학원에서 관찰한 {selected_en_name}의 학습 다이어리입니다.
 - {u_sentence}
 - {p_sentence}
 - {f_sentence}
-{traits_text}{diagnosis_text}
-[담당 강사 종합 의견]
-{teacher_custom_feedback if teacher_custom_feedback else f"우리 {selected_kr_name}는 매 수업 긍정적인 에너지를 바탕으로 꾸준히 성장하는 기특한 모습을 보여주고 있습니다."}
+{traits_text}{diagnosis_text}{custom_processed_text}
+선생님들이 신뢰 어린 시선으로 바라본 {selected_en_name}는 앞으로 채워나갈 가능성과 잠재력이 무궁무진한 아이입니다. 이번 평가에서 발견된 우리 아이의 탄탄한 강점은 아낌없이 칭찬해 키워내고, 다소 아쉬웠던 빈틈은 큐브만의 촘촘한 개별 케어 시스템을 통해 확실하게 메워 나가겠습니다.
 
-선생님들이 신뢰 어린 시선으로 바라본 {selected_kr_name}는 앞으로 채워나갈 가능성과 잠재력이 무궁무진한 아이입니다. 이번 평가에서 발견된 우리 아이의 탄탄한 강점은 아낌없이 칭찬해 키워내고, 다소 아쉬웠던 빈틈은 큐브만의 촘촘한 개별 케어 시스템을 통해 확실하게 메워 나가겠습니다.
-
-가정에서도 영어의 날개를 달아가는 {selected_kr_name}에게 아낌없는 격려와 따뜻한 칭찬의 말씀 한마디 부탁드립니다. 큐브어학원 역시 언제나 아이의 성장을 가장 가까이서 책임감 있게 지도하겠습니다.
+가정에서도 영어의 날개를 달아가는 {selected_en_name}에게 아낌없는 격려와 따뜻한 칭찬의 말씀 한마디 부탁드립니다. 큐브어학원 역시 언제나 아이의 성장을 가장 가까이서 책임감 있게 지도하겠습니다.
 
 감사합니다.
 
