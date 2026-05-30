@@ -180,4 +180,40 @@ if st.button("✨ 큐브어학원 맞춤 분석 피드백 생성"):
                 for w in weaknesses:
                     plan = DIAGNOSIS_DB[area][w]
                     # 딱딱한 양식이 아니라 서술형으로 자연스럽게 결합
-                    diagnosis_text += f"· 현재 {selected_kr_name}는 {area} 영역의 **[{w}]**
+                    diagnosis_text += f"· 현재 {selected_kr_name}는 {area} 영역의 **[{w}]** 부분에서 다소 보완이 필요한 단계로 파악되었습니다. 이를 완벽히 다지기 위해 학원에서는 **{plan}**\n"
+        
+        # 3) 성향 리스트 결합
+        traits_text = ""
+        if selected_traits:
+            traits_text = f"\n평소 학원에서 지켜본 {selected_kr_name}는 " + " ".join(selected_traits) + "\n"
+
+        # 4) 전체 프리미엄 피드백 템플릿 완성
+        feedback_msg = f"""
+안녕하세요, {selected_kr_name}({selected_en_name}) 학부모님! 😊
+큐브어학원에서 이번 한 달간 {selected_kr_name}와(과) 함께 힘차게 달려온 학습 여정과 그 성장을 담은 월말평가 결과를 전해드립니다.
+
+■ 현재 레벨: {selected_level}
+■ 학습 교재: {books_str}
+■ 평가 범위: {units_str}
+■ 평가 점수: {score}
+
+[학습 태도 및 몰입도 리포트]
+이번 한 달 동안 학원에서 관찰한 {selected_kr_name}의 학습 다이어리입니다.
+- {u_sentence}
+- {p_sentence}
+- {f_sentence}
+{traits_text}{diagnosis_text}
+[담당 강사 종합 의견]
+{teacher_custom_feedback if teacher_custom_feedback else f"우리 {selected_kr_name}는 매 수업 긍정적인 에너지를 바탕으로 꾸준히 성장하는 기특한 모습을 보여주고 있습니다."}
+
+선생님들이 신뢰 어린 시선으로 바라본 {selected_kr_name}는 앞으로 채워나갈 가능성과 잠재력이 무궁무진한 아이입니다. 이번 평가에서 발견된 우리 아이의 탄탄한 강점은 아낌없이 칭찬해 키워내고, 다소 아쉬웠던 빈틈은 큐브만의 촘촘한 개별 케어 시스템을 통해 확실하게 메워 나가겠습니다.
+
+가정에서도 영어의 날개를 달아가는 {selected_kr_name}에게 아낌없는 격려와 따뜻한 칭찬의 말씀 한마디 부탁드립니다. 큐브어학원 역시 언제나 아이의 성장을 가장 가까이서 책임감 있게 지도하겠습니다.
+
+감사합니다.
+
+- 큐브어학원 드림 -
+        """
+        
+        st.success("큐브어학원만의 고품격 피드백 메세지가 생성되었습니다!")
+        st.text_area("완성된 피드백 (카톡/문자 전송용)", value=feedback_msg.strip(), height=650)
