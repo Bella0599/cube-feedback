@@ -27,7 +27,7 @@ try:
 
     @st.cache_data(show_spinner="구글 시트에서 학원 교재 목표 정보시트를 연동 중입니다...")
     def load_objective_data(url):
-        csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=교재정보"
+        csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=books"
         data = pd.read_csv(csv_url)
         data = data.dropna(subset=['교재명', '단원', '학습목표'])
         return data
