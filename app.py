@@ -32,27 +32,29 @@ except:
 if "generated_feedback" not in st.session_state:
     st.session_state.generated_feedback = ""
 
-# --- 💡 2. [교재별 단원 핵심 학습목표 정보시트 DB - 프로그램 자체 내장] ---
-OBJECTIVE_DB = {
-    "Jungle Phonics 1": {
-        "Unit 1": "알파벳 A~D의 개별 음가를 정확히 인지하고, 단어 첫소리(Initial Sound)를 바르게 식별하기",
-        "Unit 2": "알파벳 E~H의 소리 규칙을 이해하고, 그림 단어와 매칭하여 유창하게 소리 내어 읽기",
-        "Unit 3": "알파벳 I~L의 단어들을 학습하고, 음가 결합을 통해 기초 단어의 소리를 완성하기"
-    },
-    "Wonderful World B1": {
-        "Unit 1": "주변 사물과 가족을 소개하는 기본 구문(This is...)을 익히고 실생활 소통에 활용하기",
-        "Unit 2": "다양한 색상(Colors)과 숫자(Numbers) 어휘를 마스터하고 사물의 특징을 정교하게 묘사하기",
-        "Unit 3": "신체 부위 명칭을 습득하고, 능동적인 지시 문장에 맞춰 올바르게 반응하고 표현하기"
-    },
-    "Reading Trophy 1": {
-        "Unit 1": "자연 및 동물 테마의 지문을 읽고, 글의 핵심 소재와 주제(Main Idea)를 정확하게 유추하기",
-        "Unit 2": "일상생활과 관련된 스토리를 통해 문맥 속 필수 어휘의 의미를 파악하고 세부 정보(True/False) 파악하기"
-    },
-    "Bricks Grammar B1": {
-        "Unit 1": "셀 수 있는 명사와 셀 수 없는 명사의 개념적 차이를 인지하고, 부정관사(a/an)를 규칙에 맞게 적용하기",
-        "Unit 2": "인칭대명사의 격변화(주격, 소유격, 목적격)를 정확히 이해하고 문장 성분에 맞게 배치하기"
-    }
-}
+st.subheader("📚 2. 교재별 성적표 입력 (100점 만점 기준)")
+if "Phonics" in selected_level:
+    col_m1, col_m2, col_m3 = st.columns([2, 2, 1])
+    with col_m1: main_book = st.selectbox("학습 교재", PHONICS_BOOKS)
+    with col_m2: main_units = st.multiselect("평가 단원", UNITS, key="main_unit")
+    with col_m3: main_score = st.text_input("점수", placeholder="예: 90", key="main_score")
+    sub_book, sub_units, sub_score = None, [], ""
+else:
+    st.markdown("**[Main Book 성적]**")
+    col_m1, col_m2, col_m3 = st.columns([2, 2, 1])
+    with col_m1: main_book = st.selectbox("교재 선택", BOOK1_LIST, key="reg_main")
+    with col_m2: main_units = st.multiselect("평가 단원", UNITS, key="reg_main_unit")
+    with col_m3: main_score = st.text_input("점수", placeholder="예: 85", key="reg_main_score")
+        
+    st.markdown("**[Sub Book 성적]**")
+    col_s1, col_s2, col_s3 = st.columns([2, 2, 1])
+    with col_s1: sub_book = st.selectbox("교재 선택", ["선택안함"] + BOOK2_LIST, key="reg_sub")
+    with col_s2:
+        if sub_book != "선택안함": sub_units = st.multiselect("평가 단원", UNITS, key="reg_sub_unit")
+        else: sub_units = []; st.write("부교재 없음")
+    with col_s3:
+        if sub_book != "선택안함": sub_score = st.text_input("점수", placeholder="예: 80", key="reg_sub_score")
+        else: sub_score = ""
 
 DEFAULT_OBJECTIVE = "해당 단원의 핵심 target 어휘를 마스터하고 필수 구문 구조를 이해하여 문장 속에서 자유롭게 활용하기"
 
