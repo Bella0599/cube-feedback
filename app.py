@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 
@@ -11,16 +10,16 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🏫 큐브어학원 월말평가 시스템 ")
-st.markdown("월말 평가 자동화 ")
+st.title("🏫 큐브어학원 월말평가 시스템 v18.1")
+st.markdown("다중 단원 평가 및 점수 기반 성취도(상/중/하) 자동 판별 버전")
 st.divider()
 
-# --- 1. 구글 시트 데이터 불러오기 (오직 '학생명단'만!) ---
-sheet_url = "https://docs.google.com/spreadsheets/d/1xwfmM8VELPoMktF7pZugYZxSbf8SCSGo2Ur7DIFCT9E/edit?usp=sharing" 
+# --- 1. 구글 시트 데이터 불러오기 ---
+sheet_url = "https://docs.google.com/spreadsheets/d/1xwfmM8VELPoMktF7pZugY...원장님주소" 
 try:
-    @st.cache_data(show_spinner="구글 시트에서 학생 명단을 안전하게 연결 중입니다...")
+    @st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
     def load_student_data(url):
-        csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
+        csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=학생명단"
         data = pd.read_csv(csv_url)
         data = data.dropna(subset=['레벨', '한국어이름'])
         return data
@@ -32,40 +31,32 @@ except:
 if "generated_feedback" not in st.session_state:
     st.session_state.generated_feedback = ""
 
-st.subheader("📚 2. 교재별 성적표 입력 (100점 만점 기준)")
-if "Phonics" in selected_level:
-    col_m1, col_m2, col_m3 = st.columns([2, 2, 1])
-    with col_m1: main_book = st.selectbox("학습 교재", PHONICS_BOOKS)
-    with col_m2: main_units = st.multiselect("평가 단원", UNITS, key="main_unit")
-    with col_m3: main_score = st.text_input("점수", placeholder="예: 90", key="main_score")
-    sub_book, sub_units, sub_score = None, [], ""
-else:
-    st.markdown("**[Main Book 성적]**")
-    col_m1, col_m2, col_m3 = st.columns([2, 2, 1])
-    with col_m1: main_book = st.selectbox("교재 선택", BOOK1_LIST, key="reg_main")
-    with col_m2: main_units = st.multiselect("평가 단원", UNITS, key="reg_main_unit")
-    with col_m3: main_score = st.text_input("점수", placeholder="예: 85", key="reg_main_score")
-        
-    st.markdown("**[Sub Book 성적]**")
-    col_s1, col_s2, col_s3 = st.columns([2, 2, 1])
-    with col_s1: sub_book = st.selectbox("교재 선택", ["선택안함"] + BOOK2_LIST, key="reg_sub")
-    with col_s2:
-        if sub_book != "선택안함": sub_units = st.multiselect("평가 단원", UNITS, key="reg_sub_unit")
-        else: sub_units = []; st.write("부교재 없음")
-    with col_s3:
-        if sub_book != "선택안함": sub_score = st.text_input("점수", placeholder="예: 80", key="reg_sub_score")
-        else: sub_score = ""
-
-DEFAULT_OBJECTIVE = "해당 단원의 핵심 target 어휘를 마스터하고 필수 구문 구조를 이해하여 문장 속에서 자유롭게 활용하기"
+# --- 💡 2. 데이터 및 템플릿 정의 ---
+# (OBJECTIVE_DB 삭제됨 - 공통 목표 사용)
+DEFAULT_OBJECTIVE = "해당 단원의 핵심 target 어휘를 마스터하고 필수 구문 구조를 이해하여 자유롭게 활용하기"
 
 PHONICS_BOOKS = ["Jungle Phonics 1", "Jungle Phonics 2", "Jungle Phonics 3", "Jungle Phonics 4"]
 BOOK1_LIST = ["Wonderful World B1", "Wonderful World B2", "Wonderful World B3", "Wonderful World B4", "English Trophy 3", "Reading Trophy 1"]
 BOOK2_LIST = ["Writing Monster 1", "Bricks Grammar B1", "Bricks Grammar 1"]
 UNITS = [f"Unit {i}" for i in range(1, 13)]
 
+# 점수 기반 자동 평가(상/중/하) 변환 함수
+def get_rating_from_score(score_str):
+    try:
+        score = float(score_str)
+        if score >= 90: return "상 (Excellent)"
+        elif score >= 70: return "중 (Good)"
+        else: return "하 (Needs Effort)"
+    except:
+        return "중 (Good)" # 점수가 미입력되거나 문자인 경우 기본값
+
+def get_combined_objective(book, units_list):
+    # DB가 삭제되었으므로 어떤 교재/단원이든 공통 목표를 반환합니다.
+    return DEFAULT_OBJECTIVE
+
 def convert_achievement_to_text(rating, objective, name):
-    if rating == "상 (Excellent)": return f"이번 학습의 핵심 목표였던 **[{objective}]** 과정을 완벽하게 마스터했습니다. 개념에 대한 깊이 있는 이해를 바탕으로 실전 오답이 거의 없을 뿐만 아니라, 응용 문장 구사력까지 매끄럽고 훌륭하게 발휘하는 탁월한 성취도를 증명해 보였습니다."
-    elif rating == "중 (Good)": return f"이번 학습의 핵심 목표였던 **[{objective}]** 내용을 성실하게 이수했습니다. 전반적인 개념 구조를 올바르게 잘 다져두었으며, 약간의 디테일 교정과 지속적인 반복 훈련을 통해 성취도의 정교함을 한 단계 더 안정적으로 끌어올리는 중입니다."
+    if "상" in rating: return f"이번 학습의 핵심 목표였던 **[{objective}]** 과정을 완벽하게 마스터했습니다. 개념에 대한 깊이 있는 이해를 바탕으로 실전 오답이 거의 없을 뿐만 아니라, 응용 문장 구사력까지 훌륭하게 발휘하는 탁월한 성취도를 증명해 보였습니다."
+    elif "중" in rating: return f"이번 학습의 핵심 목표였던 **[{objective}]** 내용을 성실하게 이수했습니다. 전반적인 개념 구조를 올바르게 잘 다져두었으며, 디테일 교정과 지속적인 반복 훈련을 통해 성취도의 정교함을 한 단계 더 끌어올리는 중입니다."
     else: return f"이번 학습의 핵심 목표였던 **[{objective}]** 부분에 대해 차근차근 개념을 빌드업해 가는 단계입니다. 우리 {name}(이)가 해당 규칙을 온전히 자기 것으로 소화할 수 있도록, 학원 수업 전후 밀착 클리닉과 누적 오답 보완을 통해 틈새를 촘촘하게 채워가겠습니다."
 
 UNDERSTAND_TEXTS = {"상 (Excellent)": "새로운 언어적 개념과 핵심 논리를 받아들이는 이해도가 매우 뛰어나, 진도가 막힘없이 매끄럽게 진행되고 있습니다.", "중 (Good)": "수업 내용을 차분하게 잘 따라오고 있으며, 지도를 통해 기본적인 개념을 안정적으로 소화해 나가고 있습니다.", "하 (Needs Effort)": "개념을 온전히 이해하고 자기 것으로 만드는 데 약간의 시간과 복습 훈련이 조금 더 필요한 상태입니다."}
@@ -85,7 +76,6 @@ TRAITS_CATEGORIES = {
     "🥉 격려가 필요한 학생 추천 (기특한 노력과 잠재력 칭찬)": ["어려운 과제나 생소한 개념이 주어지더라도 포기하지 않고 끝까지 성실하게 완료하려는 예쁜 태도와 기특한 도전 정신을 가지고 있습니다.", "수업 시간 동안 차분하고 정돈된 태도로 강사의 설명에 성실히 귀를 기울이며, 조금씩 자신만의 학습 페이스를 단단하게 빌드업해 가고 있습니다."]
 }
 
-# 💡 [원장님 특별 요청] 12종 명품 강사 코멘트 DB
 TEACHER_TEMPLATES = {
     "선택 안 함 (아래 직접 입력)": "",
     "🌟 [성취도/태도 우수] 전반적 우수 및 잠재력 칭찬": "이번 달 평가에서 {name}(이)는 매우 우수한 성적을 거두었습니다. 수업 중 보여주는 집중력과 과제 수행 능력이 탁월하며, 새로운 개념을 습득하는 속도도 빠릅니다. 지금의 성실하고 바른 태도를 꾸준히 유지한다면 앞으로 더 큰 발전이 있을 것으로 몹시 기대됩니다.",
@@ -125,42 +115,41 @@ if selected_student:
     row = filtered_df[filtered_df['student_label'] == selected_student].iloc[0]
     selected_en_name, selected_kr_name = row['영어이름'], row['한국어이름']
 
-# --- 4. 교재별 성적표 및 정보시트 연동 (이전 버전 고정형) ---
-st.subheader("📚 2. 교재별 정보시트 및 성취도 평가")
+# --- 4. 교재별 성적표 및 다중 단원 선택 ---
+st.subheader("📚 2. 교재별 성적표 입력 (100점 만점 기준)")
 if "Phonics" in selected_level:
-    col_m1, col_m2, col_m3 = st.columns([2, 1, 1])
+    col_m1, col_m2, col_m3 = st.columns([2, 2, 1])
     with col_m1: main_book = st.selectbox("학습 교재", PHONICS_BOOKS)
-    with col_m2: main_unit_single = st.selectbox("집중 평가 단원", UNITS, key="p_unit")
-    with col_m3: main_score = st.text_input("점수", placeholder="예: 95", key="p_score")
+    with col_m2: main_units = st.multiselect("평가 단원", UNITS, key="main_unit")
+    with col_m3: main_score = st.text_input("점수", placeholder="예: 90", key="main_score")
     
-    main_objective = OBJECTIVE_DB.get(main_book, {}).get(main_unit_single, DEFAULT_OBJECTIVE)
-    st.info(f"📋 **[{main_book} - {main_unit_single} 학습 목표 정보시트]**\n\n{main_objective}")
-    main_rating = st.radio(f"▶ {selected_en_name}의 핵심 목표 달성도 체크", ["상 (Excellent)", "중 (Good)", "하 (Needs Effort)"], key="p_rate", horizontal=True)
-    sub_book, sub_unit_single, sub_score, sub_rating, sub_objective = None, None, "", None, ""
+    if main_score:
+        auto_rating = get_rating_from_score(main_score)
+        st.caption(f"💡 입력된 점수에 따라 메인 교재 평가가 **'{auto_rating}'** 상태로 자동 적용됩니다.")
+        
+    sub_book, sub_units, sub_score = None, [], ""
 else:
-    st.markdown("🔺 **[Main Book 설정]**")
-    col_m1, col_m2, col_m3 = st.columns([2, 1, 1])
-    with col_m1: main_book = st.selectbox("교재 선택", BOOK1_LIST, key="m_book")
-    with col_m2: main_unit_single = st.selectbox("집중 평가 단원", UNITS, key="m_unit")
-    with col_m3: main_score = st.text_input("점수", placeholder="예: 90", key="m_score")
-    
-    main_objective = OBJECTIVE_DB.get(main_book, {}).get(main_unit_single, DEFAULT_OBJECTIVE)
-    st.info(f"📋 **[Main 목표 정보시트]** {main_objective}")
-    main_rating = st.radio(f"▶ Main Book 목표 달성도 체크", ["상 (Excellent)", "중 (Good)", "하 (Needs Effort)"], key="m_rate", horizontal=True)
-    
-    st.divider()
-    st.markdown("🔺 **[Sub Book 설정]**")
-    col_s1, col_s2, col_s3 = st.columns([2, 1, 1])
-    with col_s1: sub_book = st.selectbox("교재 선택", ["선택안함"] + BOOK2_LIST, key="s_book")
-    with col_s2: sub_unit_single = st.selectbox("집중 평가 단원", UNITS, key="s_unit") if sub_book != "선택안함" else None
-    with col_s3: sub_score = st.text_input("점수", placeholder="예: 85", key="s_score") if sub_book != "선택안함" else ""
-    
-    if sub_book and sub_book != "선택안함":
-        sub_objective = OBJECTIVE_DB.get(sub_book, {}).get(sub_unit_single, DEFAULT_OBJECTIVE)
-        st.info(f"📋 **[Sub 목표 정보시트]** {sub_objective}")
-        sub_rating = st.radio(f"▶ Sub Book 목표 달성도 체크", ["상 (Excellent)", "중 (Good)", "하 (Needs Effort)"], key="s_rate", horizontal=True)
-    else:
-        sub_rating, sub_objective = None, ""
+    st.markdown("**[Main Book 성적]**")
+    col_m1, col_m2, col_m3 = st.columns([2, 2, 1])
+    with col_m1: main_book = st.selectbox("교재 선택", BOOK1_LIST, key="reg_main")
+    with col_m2: main_units = st.multiselect("평가 단원", UNITS, key="reg_main_unit")
+    with col_m3: main_score = st.text_input("점수", placeholder="예: 85", key="reg_main_score")
+    if main_score:
+        auto_m_rating = get_rating_from_score(main_score)
+        st.caption(f"💡 입력된 점수에 따라 메인 교재 평가가 **'{auto_m_rating}'** 상태로 자동 적용됩니다.")
+        
+    st.markdown("**[Sub Book 성적]**")
+    col_s1, col_s2, col_s3 = st.columns([2, 2, 1])
+    with col_s1: sub_book = st.selectbox("교재 선택", ["선택안함"] + BOOK2_LIST, key="reg_sub")
+    with col_s2:
+        if sub_book != "선택안함": sub_units = st.multiselect("평가 단원", UNITS, key="reg_sub_unit")
+        else: sub_units = []; st.write("부교재 없음")
+    with col_s3:
+        if sub_book != "선택안함": sub_score = st.text_input("점수", placeholder="예: 80", key="reg_sub_score")
+        else: sub_score = ""
+    if sub_book != "선택안함" and sub_score:
+        auto_s_rating = get_rating_from_score(sub_score)
+        st.caption(f"💡 입력된 점수에 따라 서브 교재 평가가 **'{auto_s_rating}'** 상태로 자동 적용됩니다.")
 
 st.subheader("📊 3. 학생 성향 및 긍정 피드백")
 col5, col6, col7 = st.columns(3)
@@ -185,7 +174,6 @@ for area in analysis_areas:
     selected = st.multiselect(f"[{area}] 이번 달 미세 보완이 필요한 디테일", list(DIAGNOSIS_DB[area].keys()))
     if selected: selected_weaknesses[area] = selected
 
-
 st.subheader("✍️ 5. 담당 강사 추가 개별 피드백 (템플릿 12종)")
 selected_template = st.selectbox("📌 큐브어학원 마법의 코멘트 템플릿 선택", list(TEACHER_TEMPLATES.keys()))
 teacher_custom_feedback = st.text_area("✍️ 추가 개별 코멘트 (선택 사항)", placeholder="템플릿 내용 외에 덧붙이고 싶은 말씀이나, 직접 작성하고 싶은 내용이 있다면 짧게 입력해 주세요.")
@@ -195,11 +183,20 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
     if not selected_student:
         st.error("학생을 선택해 주세요.")
     else:
-        score_report = f"· {main_book} ({main_unit_single}) : {main_score}점 / 100점"
-        if sub_book and sub_book != "선택안함": score_report += f"\n· {sub_book} ({sub_unit_single}) : {sub_score}점 / 100점"
+        main_units_str = ", ".join(main_units) if main_units else "단원 미지정"
+        score_report = f"· {main_book} ({main_units_str}) : {main_score}점 / 100점"
         
-        objective_narrative = f"✔ [Main] {convert_achievement_to_text(main_rating, main_objective, selected_en_name)}"
-        if sub_book and sub_book != "선택안함": objective_narrative += f"\n\n✔ [Sub] {convert_achievement_to_text(sub_rating, sub_objective, selected_en_name)}"
+        main_rating_val = get_rating_from_score(main_score)
+        main_objective_val = get_combined_objective(main_book, main_units)
+        objective_narrative = f"✔ [Main] {convert_achievement_to_text(main_rating_val, main_objective_val, selected_en_name)}"
+        
+        if sub_book and sub_book != "선택안함": 
+            sub_units_str = ", ".join(sub_units) if sub_units else "단원 미지정"
+            score_report += f"\n· {sub_book} ({sub_units_str}) : {sub_score}점 / 100점"
+            
+            sub_rating_val = get_rating_from_score(sub_score)
+            sub_objective_val = get_combined_objective(sub_book, sub_units)
+            objective_narrative += f"\n\n✔ [Sub] {convert_achievement_to_text(sub_rating_val, sub_objective_val, selected_en_name)}"
             
         u_sentence = UNDERSTAND_TEXTS[rating_understand]
         p_sentence = PRESENT_TEXTS[rating_present]
@@ -216,16 +213,12 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
         if not care_plan_text: care_plan_text = f"· 현재 {selected_en_name}(이)는 특별한 취약점 없이 모든 영역의 밸런스를 예쁘게 유지하고 있습니다.\n"
 
         custom_processed_text = ""
-        
         if selected_template != "선택 안 함 (아래 직접 입력)":
             custom_processed_text += TEACHER_TEMPLATES[selected_template].format(name=selected_en_name) + "\n"
-            
         if teacher_custom_feedback:
             custom_processed_text += refine_teacher_feedback(teacher_custom_feedback.strip(), selected_en_name)
-            
         if not custom_processed_text.strip():
             custom_processed_text = f"이번 한 달간 {selected_en_name}(이)를 지도하며 선생님이 느낀 점은, 아이가 지닌 가능성과 성실함이 매우 기특하다는 것입니다. 앞으로도 든든한 페이스메이커가 되겠습니다."
-            
         custom_processed_text = "· " + custom_processed_text.strip().replace("\n", "\n· ")
 
         st.session_state.generated_feedback = f"""
@@ -244,7 +237,7 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
 
 
 [2. 학생 성향 및 긍정 태도 리포트]
-이번 한 달 동안 학원에서 세심하게 관찰한 {selected_en_name}의 다이어리입니다.
+이번 한 달 동안 학원에서 세심하게 관찰한 {selected_en_name}(이)의 빛나는 학습 성향과 행동 다이어리입니다.
 {positive_section}
 
 
@@ -254,11 +247,14 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
 
 
 [4. 담당 강사 개별 밀착 소견]
-우리 {selected_en_name}는 {custom_processed_text}
+우리 {selected_en_name}(이)를 가장 가까이서 밀착 지도하고 아끼는 담당 선생님의 마음을 담은 코멘트입니다.
+{custom_processed_text}
 
 
-가정에서도 영어 공부의 즐거움을 알아가는 {selected_en_name}에게 아낌없는 격려와 따뜻한 칭찬의 말씀 한마디 부탁드립니다.
-큐브어학원 역시 언제나 아이의 성장을 가장 가까이서 책임감 있게 지도하겠습니다.
+선생님들이 신뢰 어린 시선으로 바라본 {selected_en_name}(이)는 앞으로 채워나갈 가능성과 잠재력이 무궁무진한 아이입니다. 이번 평가에서 증명해낸 우리 아이의 큰 강점들은 아낌없이 칭찬해 자신감을 백 배 키워내고, 미세하게 발견된 빈틈은 큐브만의 섬세한 개별 케어 시스템을 통해 성장의 발판으로 확실하게 다져가겠습니다.
+
+가정에서도 영어 공부의 즐거움을 알아가는 {selected_en_name}(이)에게 아낌없는 격려와 따뜻한 칭찬의 말씀 한마디 부탁드립니다. 큐브어학원 역시 언제나 아이의 성장을 가장 가까이서 책임감 있게 지도하겠습니다.
+
 감사합니다.
 
 - 큐브어학원 드림 -
@@ -268,4 +264,3 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
 if st.session_state.generated_feedback:
     st.divider()
     st.text_area("📋 완성된 피드백 (마우스로 클릭하여 전체 복사 가능)", value=st.session_state.generated_feedback, height=700)
-
