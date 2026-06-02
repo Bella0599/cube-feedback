@@ -246,7 +246,7 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
 
         st.session_state.generated_feedback = f"""
 안녕하세요, {selected_en_name} 학부모님! 😊
-큐브어학원에서 이번 {selected_month} 한 달간 {selected_en_name}({selected_kr_name}) 학생과 함께 힘차게 달려온 학습 여정과 성장을 담은 [{selected_month} 월말평가 리포트]를 전해드립니다.
+큐브어학원에서 이번 {selected_month} 한 달간 {selected_en_name}({selected_kr_name}) 학생과 함께 힘차게 달려온 학습 여정과 성장을 담은 {selected_month} 월말평가 리포트를 전해드립니다.
 
 ■ 평가 대상 월: {selected_month}
 ■ 현재 레벨: {selected_level}
@@ -269,7 +269,7 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
 {care_plan_text}
 
 [4. 담당 강사 개별 밀착 소견]
-우리 {selected_en_name} 는 {custom_processed_text.strip()}
+{custom_processed_text.strip()}
 
 
 {final_closing_ment}
