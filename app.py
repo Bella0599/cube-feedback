@@ -10,8 +10,8 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🏫 큐브어학원 월말평가 시스템 v18.2")
-st.markdown("파닉스 진단 고도화 및 수준별 격려/클로징 멘트 자동화 버전")
+st.title("🏫 큐브어학원 월말평가 시스템 v18.3")
+st.markdown("파닉스 진단 고도화 및 평가 월 선택 자동화 버전")
 st.divider()
 
 # --- 1. 구글 시트 데이터 불러오기 ---
@@ -38,6 +38,7 @@ PHONICS_BOOKS = ["Jungle Phonics 1", "Jungle Phonics 2", "Jungle Phonics 3", "Ju
 BOOK1_LIST = ["Wonderful World B1", "Wonderful World B2", "Wonderful World B3", "Wonderful World B4", "English Trophy 3", "Reading Trophy 1"]
 BOOK2_LIST = ["Writing Monster 1", "Bricks Grammar B1", "Bricks Grammar 1"]
 UNITS = [f"Unit {i}" for i in range(1, 13)]
+MONTHS = [f"{i}월" for i in range(1, 13)]
 
 def get_rating_from_score(score_str):
     try:
@@ -60,7 +61,6 @@ UNDERSTAND_TEXTS = {"상 (Excellent)": "새로운 언어적 개념과 핵심 논
 PRESENT_TEXTS = {"상 (Excellent)": "질문에 대한 발표와 참여도가 적극적이며, 자신감 넘치는 목소리로 반 전체 수업 분위기를 주도합니다.", "중 (Good)": "선생님의 질문에 성실하게 답변하며, 자신에게 주어진 학습 역할을 무리 없이 잘 수행해냅니다.", "하 (Needs Effort)": "내용을 알고 있더라도 발표 시 다소 수줍어하는 경향이 있어, 적극성을 끌어올리도록 격려 중입니다."}
 FOCUS_TEXTS = {"상 (Excellent)": "수업 시간 내내 흔들림 없는 높은 몰입도를 보여주며, 지시 사항을 정확하게 이행하는 집중력이 돋보입니다.", "중 (Good)": "기본적인 수업 집중력을 잘 유지하고 있으며, 흐트러짐 없이 강사의 설명에 귀를 기울입니다.", "하 (Needs Effort)": "간혹 집중력이 흐려지는 순간이 관찰되어, 1:1 대면 질문과 밀착 케어를 통해 주의를 환기시키고 있습니다."}
 
-# 파닉스 진단 DB 고급화 반영
 DIAGNOSIS_DB = {
     "Phonics (파닉스)": {
         "유사 알파벳 형태 혼동": "대부분의 알파벳은 잘 인지하고 있으나, 간혹 모양이 비슷한 'b'와 'd', 'p'와 'q'를 헷갈리는 모습이 보입니다. 시각적인 단서나 쓰기 연습을 통해 헷갈리는 알파벳을 정확히 구별하고 내면화할 수 있도록 지도하겠습니다.",
@@ -85,7 +85,6 @@ TRAITS_CATEGORIES = {
     "🥉 격려가 필요한 학생 추천 (기특한 노력과 잠재력 칭찬)": ["어려운 과제나 생소한 개념이 주어지더라도 포기하지 않고 끝까지 성실하게 완료하려는 예쁜 태도와 기특한 도전 정신을 가지고 있습니다.", "수업 시간 동안 차분하고 정돈된 태도로 강사의 설명에 성실히 귀를 기울이며, 조금씩 자신만의 학습 페이스를 단단하게 빌드업해 가고 있습니다."]
 }
 
-# 수준별 격려 템플릿 대폭 추가
 TEACHER_TEMPLATES = {
     "선택 안 함 (아래 직접 입력)": "",
     "🌱 [기초/격려] 과정 중심의 응원 (태도 칭찬)": "지금 당장 눈에 보이는 큰 점수보다 중요한 건 {name}(이)가 포기하지 않고 영어를 대하는 태도입니다. 기초를 다지는 지금의 시간이 훗날 {name}(이)가 영어를 즐길 수 있는 가장 든든한 밑거름이 될 거예요. {name}(이)의 속도에 맞춰, 저도 포기하지 않고 끝까지 함께 걷겠습니다.",
@@ -101,7 +100,6 @@ TEACHER_TEMPLATES = {
     "🌳 [우수/심화] 훌륭한 자기 주도 학습 태도": "스스로 무엇을 모르는지 파악하고 질문하는 모습이 무척 훌륭합니다. 자기 주도적으로 학습하는 지금의 모습은 영어뿐만 아니라 아이의 모든 학습 과정에서 가장 큰 자산이 될 거예요. 지금처럼 꾸준히 자기만의 속도로 정상을 향해 갈 수 있게 힘껏 격려하겠습니다."
 }
 
-# 고급 클로징 멘트 DB
 CLOSING_MENT_DB = {
     "🤝 [협력 강조형] 신뢰와 파트너십을 강조할 때": "아이의 성장은 강사인 저와 학부모님의 따뜻한 관심이 함께 모일 때 더욱 빛이 난다고 믿습니다. 우리 아이가 영어를 통해 더 넓은 세상을 꿈꿀 수 있도록, 저 또한 최선을 다해 지도하겠습니다. 늘 믿고 맡겨주셔서 진심으로 감사합니다.",
     "🌱 [성장 중시형] 과정의 소중함을 강조할 때": "시험 점수라는 결과보다, 아이가 영어를 대하는 태도가 얼마나 긍정적으로 변화하고 있는지에 더 주목해 주시면 좋겠습니다. 그 성장의 과정을 곁에서 꼼꼼히 기록하고 이끌겠습니다. 아이가 즐겁게 영어를 즐길 수 있도록 가정에서도 많은 격려 부탁드립니다.",
@@ -118,10 +116,11 @@ def refine_teacher_feedback(raw_text, name):
     return f"현재 진행 과정에서 '{raw_text}'라는 작은 보완점이 관찰되었습니다. {name}(이)의 잠재력을 알기에 학원에서도 이 부분을 1:1로 섬세하게 지도하겠습니다."
 
 # --- 3. 사용자 입력 화면 UI 구성 ---
-st.subheader("👤 1. 학생 선택")
-col1, col2 = st.columns(2)
-with col1: selected_level = st.selectbox("현재 레벨", df['레벨'].unique().tolist())
-with col2:
+st.subheader("👤 1. 평가 월 및 학생 선택")
+col1, col2, col3 = st.columns([1, 1, 2])
+with col1: selected_month = st.selectbox("평가 월", MONTHS, index=4) # 기본값 5월 설정
+with col2: selected_level = st.selectbox("현재 레벨", df['레벨'].unique().tolist())
+with col3:
     filtered_df = df[df['레벨'] == selected_level].copy()
     filtered_df['student_label'] = filtered_df['영어이름'].fillna('이름없음').astype(str) + " (" + filtered_df['한국어이름'].astype(str) + ")"
     selected_student = st.selectbox("학생 선택", filtered_df['student_label'].tolist())
@@ -238,8 +237,9 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
 
         st.session_state.generated_feedback = f"""
 안녕하세요, {selected_en_name} 학부모님! 😊
-큐브어학원에서 이번 한 달간 {selected_en_name}({selected_kr_name}) 학생과 함께 힘차게 달려온 학습 여정과 성장을 담은 월말평가 리포트를 전해드립니다.
+큐브어학원에서 이번 {selected_month} 한 달간 {selected_en_name}({selected_kr_name}) 학생과 함께 힘차게 달려온 학습 여정과 성장을 담은 [{selected_month} 월말평가 리포트]를 전해드립니다.
 
+■ 평가 대상 월: {selected_month}
 ■ 현재 레벨: {selected_level}
 ■ 학생 이름: {selected_en_name} ({selected_kr_name})
 ■ 영역별 평가 결과 (100점 만점 기준):
@@ -268,7 +268,7 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
 
 - 큐브어학원 드림 -
         """.strip()
-        st.success("큐브어학원만의 명품 피드백 메세지가 완성되었습니다!")
+        st.success(f"{selected_month} 큐브어학원 명품 피드백 메세지가 완성되었습니다!")
 
 if st.session_state.generated_feedback:
     st.divider()
