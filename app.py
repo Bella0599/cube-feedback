@@ -5,17 +5,18 @@ st.set_page_config(page_title="큐브어학원 피드백 시스템", page_icon="
 
 st.markdown("""
     <style>
-    .main { background-color: #f8f9fa; }
+    .stApp { background-color: #f8f9fa; }
     .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #1E3A8A; color: white; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🏫 큐브어학원 월말평가 시스템 v18.4")
-st.markdown("파닉스 반 정기 시험(Midterm/Final) 선택 기능 업그레이드 버전")
+st.title("🏫 큐브어학원 월말평가 시스템 v20.0")
+st.markdown("구글 시트 연동형 교재 DB 및 점수대별 맞춤형 듀얼 내러티브 엔진")
 st.divider()
 
 # --- 1. 구글 시트 데이터 불러오기 ---
 sheet_url = "https://docs.google.com/spreadsheets/d/1xwfmM8VELPoMktF7pZugYZxSbf8SCSGo2Ur7DIFCT9E/edit?usp=sharing" 
+
 try:
     @st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
     def load_student_data(url):
@@ -23,41 +24,44 @@ try:
         data = pd.read_csv(csv_url)
         data = data.dropna(subset=['레벨', '한국어이름'])
         return data
+        
+    @st.cache_data(show_spinner="구글 시트에서 교재 학습목표 DB를 동기화 중입니다...")
+    def load_book_data(url):
+        try:
+            csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=books"
+            book_df = pd.read_csv(csv_url)
+            book_df['교재'] = book_df['교재'].astype(str).str.strip()
+            book_df['유닛'] = book_df['유닛'].astype(str).str.strip()
+            book_df['학습목표'] = book_df['학습목표'].astype(str).str.strip()
+            return book_df
+        except:
+            return pd.DataFrame(columns=['교재', '유닛', '학습목표'])
+
     df = load_student_data(sheet_url)
+    df_books = load_book_data(sheet_url)
 except:
-    st.error("구글 시트 연결을 기다리고 있습니다. 시트 주소를 확인해 주세요.")
+    st.error("구글 시트 연결을 기다리고 있습니다. 시트 주소 및 탭 이름(students, books)을 확인해 주세요.")
     st.stop()
 
 if "generated_feedback" not in st.session_state:
     st.session_state.generated_feedback = ""
 
 # --- 💡 2. 데이터 및 템플릿 정의 ---
-DEFAULT_OBJECTIVE = "해당 단원의 핵심 target 어휘를 마스터하고 필수 구문 구조를 이해하여 자유롭게 활용하기"
-
 PHONICS_BOOKS = ["Jungle Phonics 1", "Jungle Phonics 2", "Jungle Phonics 3", "Jungle Phonics 4"]
-BOOK1_LIST = ["Wonderful World B1", "Wonderful World B2", "Wonderful World B3", "Wonderful World B4", "English Trophy 3", "Reading Trophy 1"]
+BOOK1_LIST = ["Wonderful World B1", "Wonderful World B2", "Wonderful World B3", "Wonderful World B4", "English Trophy 3","English Trophy 4","English Trophy 5","English Trophy 6", "Reading Trophy 1", "Reading Trophy 2", "Reading Trophy 3"]
 BOOK2_LIST = ["Writing Monster 1", "Bricks Grammar B1", "Bricks Grammar 1"]
 UNITS = [f"Unit {i}" for i in range(1, 13)]
 MONTHS = [f"{i}월" for i in range(1, 13)]
 
-def get_rating_from_score(score_str):
-    try:
-        score = float(score_str)
-        if score >= 90: return "상 (Excellent)"
-        elif score >= 70: return "중 (Good)"
-        else: return "하 (Needs Effort)"
-    except:
-        return "중 (Good)"
+# [💡 자동화 함수] 구글 시트에서 가져온 데이터프레임을 기반으로 학습 목표 실시간 검색
+def get_auto_objective(book, unit, book_dataframe):
+    if book_dataframe is not None and not book_dataframe.empty:
+        filtered = book_dataframe[(book_dataframe['교재'] == str(book).strip()) & (book_dataframe['유닛'] == str(unit).strip())]
+        if not filtered.empty:
+            return filtered.iloc[0]['학습목표']
+    return f"{book} {unit}의 핵심 Target 어휘 마스터 및 필수 규칙 문장 확장"
 
-def get_combined_objective(book, units_list):
-    return DEFAULT_OBJECTIVE
-
-def convert_achievement_to_text(rating, objective, name):
-    if "상" in rating: return f"이번 달 과정을 완벽하게 마스터했습니다. 개념에 대한 깊이 있는 이해를 바탕으로, 응용 문장 구사력까지 훌륭하게 발휘하는 탁월한 성취도를 증명해 보였습니다."
-    elif "중" in rating: return f"이번 달 과정을 성실하게 이수했습니다. 전반적인 개념 구조를 올바르게 잘 다져두었으며, 디테일 교정과 지속적인 반복 훈련을 통해 성취도의 정교함을 한 단계 더 끌어올리는 중입니다."
-    else: return f"이번 달 학습의 핵심 목표에 대해 차근차근 개념을 빌드업해 가는 단계입니다. 우리 {name}가 해당 규칙을 온전히 자기 것으로 소화할 수 있도록, 학원 수업 전후 밀착 클리닉과 누적 오답 보완을 통해 틈새를 촘춤하게 채워가겠습니다."
-
-UNDERSTAND_TEXTS = {"상 (Excellent)": "새로운 언어적 개념과 핵심 논리를 받아들이는 이해도가 매우 뛰어나, 진도가 막힘없이 매끄럽게 진행되고 있습니다.", "중 (Good)": "수업 내용을 차분하게 잘 따라오고 있으며, 지도를 통해 기본적인 개념을 안정적으로 소화해 나가고 있습니다.", "하 (Needs Effort)": "개념을 온전히 이해하고 자기 것으로 만드는 데 약간의 시간과 복습 훈련이 조금 더 필요한 상태입니다."}
+UNDERSTAND_TEXTS = {"상 (Excellent)": "새로운 언어적 개념과 핵심 논리를 받아들이는 이해도가 매우 뛰어나, 진도가 막힘없이 매끄럽게 진행되고 있습니다.", "중 (Good)": "수업 내용을 차분하게 잘 따라오고 있으며, 지도를 통해 기본적인 개념을 안정적으로 소화해 나가고 있습니다.", "하 (Needs Effort)": "개념을 온전히 이해하고 자기 것으로 만드는 데 약간의 시간และ 복습 훈련이 조금 더 필요한 상태입니다."}
 PRESENT_TEXTS = {"상 (Excellent)": "질문에 대한 발표와 참여도가 적극적이며, 자신감 넘치는 목소리로 반 전체 수업 분위기를 주도합니다.", "중 (Good)": "선생님의 질문에 성실하게 답변하며, 자신에게 주어진 학습 역할을 무리 없이 잘 수행해냅니다.", "하 (Needs Effort)": "내용을 알고 있더라도 발표 시 다소 수줍어하는 경향이 있어, 적극성을 끌어올리도록 격려 중입니다."}
 FOCUS_TEXTS = {"상 (Excellent)": "수업 시간 내내 흔들림 없는 높은 몰입도를 보여주며, 지시 사항을 정확하게 이행하는 집중력이 돋보입니다.", "중 (Good)": "기본적인 수업 집중력을 잘 유지하고 있으며, 흐트러짐 없이 강사의 설명에 귀를 기울입니다.", "하 (Needs Effort)": "간혹 집중력이 흐려지는 순간이 관찰되어, 1:1 대면 질문과 밀착 케어를 통해 주의를 환기시키고 있습니다."}
 
@@ -74,11 +78,9 @@ DIAGNOSIS_DB = {
         "긴 단어에 대한 두려움 (Chunking 필요)": "알파벳이 여러 개 모인 긴 단어를 보면 지레 겁을 먹고 스스로 읽어보기 전에 포기하려는 모습이 있습니다. 긴 단어를 두 부분으로 쪼개어 읽는 방법을 알려주어 성취감과 자신감을 심어주겠습니다.",
         "틀릴까 봐 목소리가 작아지는 현상": "스스로 큰 소리 내어 읽어보는 발화 연습이 중요하지만, 틀릴까 봐 목소리가 작아지는 경향이 있습니다. 학원에서도 격려를 아끼지 않겠으니, 댁에서도 아이가 자신 있게 읽을 수 있도록 많은 응원 부탁드립니다."
     },
-    "Reading (독해/리딩)": {"글의 메인 주제 파악을 어려워 하는 모습이 보입니다.": "지문을 읽은 후 스스로 한 줄 제목을 달아보거나 중심 문장을 찾아내는 훈련을 통해, 글의 거시적인 흐름을 짚어내는 능력을 키우겠습니다.", "세부 내용 찾기 실수가 보입니다.": "문제를 먼저 분석한 뒤 지문에서 단서를 역추적하는 스캐닝 기술을 보완하여 실전 오답률을 낮추겠습니다."},
-    "Grammar (문법)": {"be동사와 일반동사 쓰임 혼동하는 모습이 보입니다.": "두 동사의 핵심 차이점을 직관적으로 인지시키고, 문장 구조 드릴 학습을 강화하겠습니다.","명사의 단수, 복수 혼동하는 모습이 보입니다.": "수업시간에 더 많은 연습을 통해 자연스럽게 이해하고, 반복 학습을 통해 강화시킬수 있도록 지도하겠습니다."},
-    "Writing (영작)": {"대소문자 및 문장 부호 누락": "글쓰기의 기본인 문장 부호 규칙을 강조하고, 작성을 마친 문장을 스스로 피드백하며 정교함을 기르도록 지도하겠습니다.","단어의 의미는 잘 이해하고 있으나 철자 실수가 일부 발견되었습니다.": "반복 학습을 통해 정확한 스펠링 습관을 형성할 수 있도록 돕겠습니다.",
-                     "단어를 알고는 있지만 철자에서 아쉬움이 보이는 부분이 있었습니다.": "꾸준한 단어 복습과 쓰기 연습을 통해 정확도를 높여갈 예정입니다.","문장의 의미 전달은 잘 이루어지고 있으나 복수형 표현을 놓치는 경우가 있었습니다.": "다양한 예문을 통해 자연스럽게 익힐 수 있도록 지도하겠습니다.",
-                     "동사를 사용하는 과정에서 일부 실수가 있었으며,": "문장 구조를 꼼꼼히 확인하는 습관을 통해 정확성을 높여갈 예정입니다." }
+    "Reading (독해/리딩)": {"글의 메인 아이디어(주제) 파악 어려움": "지문을 읽은 후 스스로 한 줄 제목을 달아보거나 중심 문장을 찾아내는 훈련을 통해, 글의 거시적인 흐름을 짚어내는 능력을 키우겠습니다.", "세부 내용 찾기 실수": "문제를 먼저 분석한 뒤 지문에서 단서를 역추적하는 스캐닝 기술을 보완하여 실전 오답률을 낮추겠습니다."},
+    "Grammar (문법)": {"be동사와 일반동사 쓰임 혼동": "두 동사의 핵심 차이점을 직관적으로 인지시키고, 문장 구조 드릴 학습을 강화하겠습니다."},
+    "Writing (영작)": {"대소문자 및 문장 부호 누락": "글쓰기의 기본인 문장 부호 규칙을 강조하고, 작성을 마친 문장을 스스로 피드백하며 정교함을 기르도록 지도하겠습니다."}
 }
 
 TRAITS_CATEGORIES = {
@@ -89,16 +91,16 @@ TRAITS_CATEGORIES = {
 
 TEACHER_TEMPLATES = {
     "선택 안 함 (아래 직접 입력)": "",
-    "🌱 [기초/격려] 과정 중심의 응원 (태도 칭찬)": "지금 당장 눈에 보이는 큰 점수보다 중요한 건 {name}가 포기하지 않고 영어를 대하는 태도입니다. 기초를 다지는 지금의 시간이 훗날 {name}가 영어를 즐길 수 있는 가장 든든한 밑거름이 될 거예요. {name}의 속도에 맞춰, 저도 포기하지 않고 끝까지 함께 걷겠습니다.",
-    "🌱 [기초/격려] 작은 성취 칭찬 (자신감 부여)": "오늘 수업 중 {name}가 스스로 문장을 읽어낸 순간이 있었습니다. 그 작은 성공들이 모여 큰 자신감이 될 거예요. 지금은 틀리는 것이 너무나 당연한 과정이니, {name}가 주눅 들지 않고 계속 도전할 수 있도록 댁에서도 따뜻한 응원 부탁드립니다.",
-    "🌱 [기초/격려] 공감과 믿음 전달": "영어를 처음 익히며 {name}가 겪는 어려움들을 저 또한 충분히 공감하고 있습니다. 아이가 어려워하는 부분을 하나씩 세심하게 채워가다 보면, 어느새 영어와 친구가 되어있는 {name}를 발견하실 거예요. 학부모님의 믿음이 아이에게는 무엇보다 큰 힘이 됩니다.",
+    "🌱 [기초/격려] 과정 중심의 응원 (태도 칭찬)": "지금 당장 눈에 보이는 큰 점수보다 중요한 건 {name}(이)가 포기하지 않고 영어를 대하는 태도입니다. 기초를 다지는 지금의 시간이 훗날 {name}(이)가 영어를 즐길 수 있는 가장 든든한 밑거름이 될 거예요. {name}(이)의 속도에 맞춰, 저도 포기하지 않고 끝까지 함께 걷겠습니다.",
+    "🌱 [기초/격려] 작은 성취 칭찬 (자신감 부여)": "오늘 수업 중 {name}(이)가 스스로 문장을 읽어낸 순간이 있었습니다. 그 작은 성공들이 모여 큰 자신감이 될 거예요. 지금은 틀리는 것이 너무나 당연한 과정이니, {name}(이)가 주눅 들지 않고 계속 도전할 수 있도록 댁에서도 따뜻한 응원 부탁드립니다.",
+    "🌱 [기초/격려] 공감과 믿음 전달": "영어를 처음 익히며 {name}(이)가 겪는 어려움들을 저 또한 충분히 공감하고 있습니다. 아이가 어려워하는 부분을 하나씩 세심하게 채워가다 보면, 어느새 영어와 친구가 되어있는 {name}(이)를 발견하실 거예요. 학부모님의 믿음이 아이에게는 무엇보다 큰 힘이 됩니다.",
     
-    "🌿 [중간/도약] 성실함 인정과 확신": "수업에 임하는 {name}의 모습에서 매달 깊은 신뢰를 느낍니다. 성실함은 그 무엇보다 강력한 실력입니다. 지금처럼 기본기를 착실히 다져간다면, 머지않아 더 높은 도약의 순간을 맞이하게 될 것이라 확신합니다.",
-    "🌿 [중간/도약] 한 단계 성장 가능성": "우리 {name}는 지금 한 단계 더 성장하기 위해 힘차게 날갯짓하는 중입니다. 조금만 더 힘을 내서 지금의 노력을 유지한다면, 더 복잡한 문장도 자유롭게 다루는 모습을 보실 수 있을 거예요. 제가 아이의 성장을 곁에서 가장 가까이 돕겠습니다.",
-    "🌿 [중간/도약] 긍정적 학습 습관 칭찬": "예전보다 학습 태도가 훨씬 의젓해졌습니다. 스스로 공부하려는 의지가 눈에 띄게 좋아진 점이 무척 대견하네요. 지금처럼 올바른 학습 습관을 차곡차곡 쌓아가다 보면, 영어 공부가 {name}에게 더 즐거운 도전이 될 것입니다.",
+    "🌿 [중간/도약] 성실함 인정과 확신": "수업에 임하는 {name}(이)의 모습에서 매달 깊은 신뢰를 느낍니다. 성실함은 그 무엇보다 강력한 실력입니다. 지금처럼 기본기를 착실히 다져간다면, 머지않아 더 높은 도약의 순간을 맞이하게 될 것이라 확신합니다.",
+    "🌿 [중간/도약] 한 단계 성장 가능성": "우리 {name}(이)는 지금 한 단계 더 성장하기 위해 힘차게 날갯짓하는 중입니다. 조금만 더 힘을 내서 지금의 노력을 유지한다면, 더 복잡한 문장도 자유롭게 다루는 모습을 보실 수 있을 거예요. 제가 아이의 성장을 곁에서 가장 가까이 돕겠습니다.",
+    "🌿 [중간/도약] 긍정적 학습 습관 칭찬": "예전보다 학습 태도가 훨씬 의젓해졌습니다. 스스로 공부하려는 의지가 눈에 띄게 좋아진 점이 무척 대견하네요. 지금처럼 올바른 학습 습관을 차곡차곡 쌓아가다 보면, 영어 공부가 {name}(이)에게 더 즐거운 도전이 될 것입니다.",
     
-    "🌳 [우수/심화] 더 높은 곳을 향한 심화 도전": "현재 실력에 안주하지 않고 더 깊이 있는 내용을 이해하려는 {name}의 열정이 참 멋집니다. 이제는 조금 더 난도가 높은 심화 과정으로 아이의 가능성을 넓혀보려 합니다. 아이의 잠재력이 더 넓은 세상에서 활짝 피어날 수 있도록 이끌겠습니다.",
-    "🌳 [우수/심화] 문제 해결 능력과 자부심 고취": "수업에서 {name}가 보여준 문제 해결 능력은 저도 감탄할 정도였습니다. 영어를 단순히 지식으로 습득하는 것을 넘어, 자신의 생각을 조리 있게 표현하는 단계로 멋지게 진입하고 있네요. 아이가 영어에 대해 큰 자부심을 느낄 수 있도록 아낌없이 칭찬해 주세요.",
+    "🌳 [우수/심화] 더 높은 곳을 향한 심화 도전": "현재 실력에 안주하지 않고 더 깊이 있는 내용을 이해하려는 {name}(이)의 열정이 참 멋집니다. 이제는 조금 더 난도가 높은 심화 과정으로 아이의 가능성을 넓혀보려 합니다. 아이의 잠재력이 더 넓은 세상에서 활짝 피어날 수 있도록 이끌겠습니다.",
+    "🌳 [우수/심화] 문제 해결 능력과 자부심 고취": "오늘 수업에서 {name}(이)가 보여준 문제 해결 능력은 저도 감탄할 정도였습니다. 영어를 단순히 지식으로 습득하는 것을 넘어, 자신의 생각을 조리 있게 표현하는 단계로 멋지게 진입하고 있네요. 아이가 영어에 대해 큰 자부심을 느낄 수 있도록 아낌없이 칭찬해 주세요.",
     "🌳 [우수/심화] 훌륭한 자기 주도 학습 태도": "스스로 무엇을 모르는지 파악하고 질문하는 모습이 무척 훌륭합니다. 자기 주도적으로 학습하는 지금의 모습은 영어뿐만 아니라 아이의 모든 학습 과정에서 가장 큰 자산이 될 거예요. 지금처럼 꾸준히 자기만의 속도로 정상을 향해 갈 수 있게 힘껏 격려하겠습니다."
 }
 
@@ -115,12 +117,19 @@ def refine_teacher_feedback(raw_text, name):
     if any(kw in raw_text for kw in ["숙제", "과제"]): refined_sentences.append("가끔 과제에서 놓치는 실수가 있습니다. 학원에서도 수업 전 숙제를 더블 체크하며 꼼꼼히 완수하는 습관을 빌드업하겠습니다.")
     if any(kw in raw_text for kw in ["집중", "산만"]): refined_sentences.append("주변에 호기심이 많아 간혹 시선이 분산될 때가 있습니다. 높은 몰입도를 유지하도록 밀착 케어로 집중 페이스를 조절하겠습니다.")
     if refined_sentences: return " ".join(refined_sentences)
-    return f"현재 진행 과정에서 '{raw_text}'라는 작은 보완점이 관찰되었습니다. {name}의 잠재력을 알기에 학원에서도 이 부분을 1:1로 섬세하게 지도하겠습니다."
+    return f"현재 진행 과정에서 '{raw_text}'라는 작은 보완점이 관찰되었습니다. {name}(이)의 잠재력을 알기에 학원에서도 이 부분을 1:1로 섬세하게 지도하겠습니다."
+
+# 점수 파싱용 안전 함수
+def parse_score(score_str):
+    try:
+        return int(score_str)
+    except:
+        return 90  # 기본값 백업
 
 # --- 3. 사용자 입력 화면 UI 구성 ---
 st.subheader("👤 1. 평가 월 및 학생 선택")
 col1, col2, col3 = st.columns([1, 1, 2])
-with col1: selected_month = st.selectbox("평가 월", MONTHS, index=4) # 기본값 5월 설정
+with col1: selected_month = st.selectbox("평가 월", MONTHS, index=4) 
 with col2: selected_level = st.selectbox("현재 레벨", df['레벨'].unique().tolist())
 with col3:
     filtered_df = df[df['레벨'] == selected_level].copy()
@@ -133,26 +142,21 @@ if selected_student:
     selected_en_name, selected_kr_name = row['영어이름'], row['한국어이름']
 
 # --- 4. 교재별 성적표 및 다중 단원 선택 ---
-st.subheader("📚 2. 교재별 성적표 입력 (100점 만점 기준)")
+st.subheader("📚 2. 교재별 성적표 및 학습 유닛 선택")
 if "Phonics" in selected_level:
-    col_m1, col_m2, col_m3 = st.columns([2, 2, 1])
-    with col_m1: main_book = st.selectbox("학습 교재", PHONICS_BOOKS)
-    # 파닉스 전용: 유닛 다중선택 대신 시험 종류 단일선택박스로 변경
-    with col_m2: phonics_test = st.selectbox("평가 종류", ["Midterm Test (Unit 1-4)", "Final Test (Unit 1-8)"], key="phonics_test")
-    with col_m3: main_score = st.text_input("점수", placeholder="예: 90", key="main_score")
-    if main_score:
-        st.caption(f"💡 자동 평가: **'{get_rating_from_score(main_score)}'**")
+    col_p1, col_p2, col_p3 = st.columns([2, 2, 1])
+    with col_p1: primary_book = st.selectbox("학습 교재", PHONICS_BOOKS)
+    with col_p2: primary_units = st.multiselect("평가 단원 (보통 3개 선택)", UNITS, default=["Unit 1", "Unit 2", "Unit 3"] if len(UNITS)>=3 else [], key="primary_unit")
+    with col_p3: primary_score = st.text_input("점수", placeholder="예: 90", key="primary_score_val")
     sub_book, sub_units, sub_score = None, [], ""
 else:
-    st.markdown("**[Main Book 성적]**")
-    col_m1, col_m2, col_m3 = st.columns([2, 2, 1])
-    with col_m1: main_book = st.selectbox("교재 선택", BOOK1_LIST, key="reg_main")
-    with col_m2: main_units = st.multiselect("평가 단원", UNITS, key="reg_main_unit")
-    with col_m3: main_score = st.text_input("점수", placeholder="예: 85", key="reg_main_score")
-    if main_score:
-        st.caption(f"💡 자동 평가: **'{get_rating_from_score(main_score)}'**")
+    st.markdown("**[주교재 성적]**")
+    col_p1, col_p2, col_p3 = st.columns([2, 2, 1])
+    with col_p1: primary_book = st.selectbox("교재 선택", BOOK1_LIST, key="reg_primary")
+    with col_p2: primary_units = st.multiselect("평가 단원 (보통 3개 선택)", UNITS, default=["Unit 1", "Unit 2", "Unit 3"] if len(UNITS)>=3 else [], key="reg_primary_unit")
+    with col_p3: primary_score = st.text_input("점수", placeholder="예: 85", key="reg_primary_score")
         
-    st.markdown("**[Sub Book 성적]**")
+    st.markdown("**[부교재 성적]**")
     col_s1, col_s2, col_s3 = st.columns([2, 2, 1])
     with col_s1: sub_book = st.selectbox("교재 선택", ["선택안함"] + BOOK2_LIST, key="reg_sub")
     with col_s2:
@@ -161,10 +165,36 @@ else:
     with col_s3:
         if sub_book != "선택안함": sub_score = st.text_input("점수", placeholder="예: 80", key="reg_sub_score")
         else: sub_score = ""
-    if sub_book != "선택안함" and sub_score:
-        st.caption(f"💡 자동 평가: **'{get_rating_from_score(sub_score)}'**")
 
-st.subheader("📊 3. 학생 성향 및 긍정 피드백")
+# --- 5. 이번 달 유닛별 성취 유형 및 상세 분석 ---
+st.markdown("---")
+st.subheader("🎯 3. 이번 달 유닛별 상세 성취도 다이어리 빌더")
+st.caption("입력하신 교재 점수를 기반으로 내러티브 엔진이 성취 단원을 자동 분류합니다.")
+
+type1_well, type2_well, type2_bad, type3_well, type3_bad = [], [], [], [], []
+
+if not primary_units:
+    st.warning("⚠️ 위 2번 항목에서 '평가 단원'을 먼저 선택해 주셔야 세부 분석이 가능합니다.")
+else:
+    p_score_num = parse_score(primary_score)
+    
+    # 주교재 점수 기반 트리거 분기
+    if p_score_num >= 90:
+        st.markdown("🏆 **주교재 분석 유형 : 상위권 (90점 이상)**")
+        type1_well = st.multiselect("🥇 완벽하게 마스터하고 깊이 이해한 단원을 선택하세요 (복수 선택)", primary_units, default=primary_units)
+    elif p_score_num >= 75:
+        st.markdown("🌿 **주교재 분석 유형 : 중위권 (75점 ~ 89점)**")
+        col_t2_1, col_t2_2 = st.columns(2)
+        with col_t2_1: type2_well = st.multiselect("🟩 높은 이해도를 보이며 잘한 단원 (복수 선택)", primary_units)
+        with col_t2_2: type2_bad = st.multiselect("🟥 미세하게 오답이 있거나 개념 보완이 필요한 단원", [u for u in primary_units if u not in type2_well])
+    else:
+        st.markdown("🌱 **주교재 분석 유형 : 집중 케어권 (74점 이하)**")
+        col_t3_1, col_t3_2 = st.columns(2)
+        with col_t3_1: type3_well = st.multiselect("🟦 어려운 와중에도 기특하게 잘 따라와 준 단원", primary_units)
+        with col_t3_2: type3_bad = st.multiselect("🟧 아직 개념을 다루기 어려워하고 꼼꼼한 복습이 필요한 단원", [u for u in primary_units if u not in type3_well])
+
+# --- 6. 학생 성향 및 긍정 피드백 ---
+st.subheader("📊 4. 수업 태도 및 성향 피드백")
 col5, col6, col7 = st.columns(3)
 with col5: rating_understand = st.selectbox("수업 이해도", list(UNDERSTAND_TEXTS.keys()))
 with col6: rating_present = st.selectbox("발표 및 참여", list(PRESENT_TEXTS.keys()))
@@ -176,7 +206,7 @@ for category_name, traits in TRAITS_CATEGORIES.items():
     selected = st.multiselect(category_name, traits)
     selected_traits.extend(selected)
 
-st.subheader("🔍 4. 영역별 보완점 및 성장 플랜")
+st.subheader("🔍 5. 영역별 보완점 및 성장 플랜")
 analysis_areas = ["Phonics (파닉스)"] if "Phonics" in selected_level else ["Reading (독해/리딩)"]
 if sub_book and sub_book != "선택안함":
     if "Grammar" in sub_book: analysis_areas.append("Grammar (문법)")
@@ -187,68 +217,95 @@ for area in analysis_areas:
     selected = st.multiselect(f"[{area}] 이번 달 미세 보완이 필요한 디테일", list(DIAGNOSIS_DB[area].keys()))
     if selected: selected_weaknesses[area] = selected
 
-st.subheader("✍️ 5. 담당 강사 개별 피드백 및 클로징")
+st.subheader("✍️ 6. 담당 강사 개별 피드백 및 클로징")
 selected_template = st.selectbox("📌 마법의 코멘트 템플릿 선택 (수준별 격려)", list(TEACHER_TEMPLATES.keys()))
 teacher_custom_feedback = st.text_area("✍️ 추가 개별 코멘트 (선택 사항)", placeholder="템플릿 내용 외에 덧붙이고 싶은 말씀이 있다면 자유롭게 입력해 주세요.")
 st.markdown("---")
 selected_closing = st.selectbox("💌 안내문 클로징 멘트 선택", list(CLOSING_MENT_DB.keys()))
 
-# --- 5. 피드백 메세지 생성 로직 ---
+# --- 7. 피드백 메세지 생성 로직 ---
 if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
     if not selected_student:
         st.error("학생을 선택해 주세요.")
+    elif not primary_units:
+        st.error("평가 단원을 최소 하나 이상 선택해 주세요.")
     else:
-        # 파닉스 반과 일반 반의 단원 표시 텍스트 처리 최적화
-        if "Phonics" in selected_level:
-            main_units_str = phonics_test
-            main_units_payload = [phonics_test]
-        else:
-            main_units_str = ", ".join(main_units) if main_units else "단원 미지정"
-            main_units_payload = main_units
-
-        score_report = f"· {main_book} ({main_units_str}) : {main_score}점 / 100점"
-        
-        main_rating_val = get_rating_from_score(main_score)
-        main_objective_val = get_combined_objective(main_book, main_units_payload)
-        objective_narrative = f"✔ [Main] {convert_achievement_to_text(main_rating_val, main_objective_val, selected_en_name)}"
-        
+        # 유닛별 목표 리스트 자동 생성
+        objective_list_text = ""
+        for unit in primary_units:
+            obj = get_auto_objective(primary_book, unit, df_books)
+            objective_list_text += f" - {unit}: {obj}\n"
+            
+        primary_units_str = ", ".join(primary_units) if primary_units else "단원 미지정"
+        score_report = f"· {primary_book} ({primary_units_str}) : {primary_score}점 / 100점"
         if sub_book and sub_book != "선택안함": 
             sub_units_str = ", ".join(sub_units) if sub_units else "단원 미지정"
             score_report += f"\n· {sub_book} ({sub_units_str}) : {sub_score}점 / 100점"
-            
-            sub_rating_val = get_rating_from_score(sub_score)
-            sub_objective_val = get_combined_objective(sub_book, sub_units)
-            objective_narrative += f"\n\n✔ [Sub] {convert_achievement_to_text(sub_rating_val, sub_objective_val, selected_en_name)}"
-            
+
+        # [독립형 내러티브 엔진] 점수값이 비슷해도 겹치지 않도록 이원화 설계
+        p_score_num = parse_score(primary_score)
+        
+        # 1. 주교재용 고유 코멘트 (3단계)
+        primary_narrative = ""
+        if p_score_num >= 90:
+            well_str = ", ".join(type1_well) if type1_well else "이번 달 전 단원"
+            primary_narrative = f"이번 달 주요 핵심 과정인 **[{well_str}]** 영역의 개념과 규칙을 깊이 있게 완벽하게 이해하고 소화해 냈습니다. 오답에 대한 피드백도 스펀지처럼 빠르게 흡수하여 탁월한 성취를 보여주었습니다. 우리 {selected_en_name}(이)에게 앞으로도 영어 공부가 더욱 즐겁고 깊이 있는 수업이 될 수 있도록 늘 칭찬하며 최선으로 노력하겠습니다."
+        elif p_score_num >= 75:
+            well_str = ", ".join(type2_well) if type2_well else "주요 학습"
+            bad_str = ", ".join(type2_bad) if type2_bad else "일부 심화"
+            primary_narrative = f"이번 달 과정 중 **[{well_str}]** 영역에서는 매우 높은 이해도를 보이며 안정적으로 과제를 수행해 냈습니다. 다만, 복습 과정 중 **[{bad_str}]** 부분에서는 개념적 규칙을 완벽히 정교하게 체화하는 데 있어 아주 미세하게 아쉬운 부분이 관찰되었습니다. 해당 단원은 다음 달에도 유기적인 연계 학습 및 꼼꼼한 반복 학습을 병행하여 부족한 틈새를 단단하게 다지고 완벽하게 채워가겠습니다."
+        else:
+            well_str = ", ".join(type3_well) if type3_well else "기본 진도"
+            bad_str = ", ".join(type3_bad) if type3_bad else "일부 영역"
+            primary_narrative = f"이번 한 달 동안 다소 생소하고 어려울 수 있는 내용이었음에도 불구하고, **[{well_str}]** 부분은 지치지 않고 끝까지 기특하게 잘 따라와 주었습니다. 다만 학습 확장 단계인 **[{bad_str}]** 영역에서는 아직 규칙을 유연하게 적용하거나 소리를 정확하게 구별해 내는 데 다소 어려움을 보이고 있습니다. 수업 시간에 스스로 조금 힘들어하더라도 끝까지 강사의 설명에 집중하며 잘 따라오려는 예쁜 모습이 돋보이는 만큼, 밀착 클리닉을 통해 학습 자신감을 단단하게 회복하도록 돕겠습니다."
+
+        # 2. 부교재용 고유 코멘트 (3단계 - 주교재와 완벽히 다른 문맥 배치)
+        sub_narrative = ""
+        if sub_book and sub_book != "선택안함":
+            s_score_num = parse_score(sub_score)
+            if s_score_num >= 90:
+                sub_narrative = f"\n\n또한, 연계 과정인 부교재 **[{sub_book}]** 학습에서도 흔들림 없는 최상위권의 감각을 증명했습니다. 응용 표현 능력이 매우 뛰어나며, 배운 표현 요소를 유연하게 확장하여 주도적으로 활용하는 능력이 단연 돋보입니다."
+            elif s_score_num >= 75:
+                sub_narrative = f"\n\n또한, 부교재 **[{sub_book}]**를 활용한 심화 및 문장 확장 학습 과정을 성실하게 수행해 나가고 있습니다. 성적 자체는 무난하고 안정적이나, 특정 취약 패턴에서 자잘한 실수가 발생하지 않도록 오답 분석을 통해 단단하게 교정해 가겠습니다."
+            else:
+                sub_narrative = f"\n\n또한, 부교재 **[{sub_book}]** 학습 과정에서 일부 고난도 문형이나 생소한 문법 규칙을 다루는 데 다소 부담을 느끼는 상태입니다. 개념적 정체기를 잘 극복할 수 있도록 진도를 유연하게 조절하고 밀착 가이드를 제공하여 부담을 덜어주도록 하겠습니다."
+
+        objective_narrative = primary_narrative + sub_narrative
+
+        # 태도 코멘트 생성
         u_sentence = UNDERSTAND_TEXTS[rating_understand]
         p_sentence = PRESENT_TEXTS[rating_present]
         f_sentence = FOCUS_TEXTS[rating_focus]
-        traits_text = f"\n특히 {selected_en_name}는 평소 학원에서 " + " ".join(selected_traits) if selected_traits else ""
+        traits_text = f"\n특히 {selected_en_name}(이)는 평소 학원에서 " + " ".join(selected_traits) if selected_traits else ""
         positive_section = f"- {u_sentence}\n- {p_sentence}\n- {f_sentence}{traits_text}"
 
+        # 케어 플랜 생성
         care_plan_text = ""
         if selected_weaknesses:
             for area, weaknesses in selected_weaknesses.items():
                 for w in weaknesses:
                     plan = DIAGNOSIS_DB[area][w]
                     care_plan_text += f"· 완벽한 도약을 위해 {area}의 [{w}] 부분을 미세하게 터치해 주는 단계가 필요합니다. 학원에서는 이를 위해 {plan}\n"
-        if not care_plan_text: care_plan_text = f"· 현재 {selected_en_name}는 모든 영역의 밸런스를 완벽하게 유지하고 있습니다.\n"
+        if not care_plan_text: care_plan_text = f"· 현재 {selected_en_name}(이)는 모든 영역의 밸런스를 예쁘게 유지하고 있습니다.\n"
 
+        # 마법의 코멘트 및 강사 피드백 결합
         custom_processed_text = ""
         if selected_template != "선택 안 함 (아래 직접 입력)":
             custom_processed_text += TEACHER_TEMPLATES[selected_template].format(name=selected_en_name) + " "
         if teacher_custom_feedback:
             custom_processed_text += refine_teacher_feedback(teacher_custom_feedback.strip(), selected_en_name)
         if not custom_processed_text.strip():
-            custom_processed_text = f"이번 한 달간 {selected_en_name}를 지도하며 선생님이 느낀 점은, 아이가 지닌 가능성과 성실함이 매우 기특하다는 것입니다. 앞으로도 든든한 페이스메이커가 되겠습니다."
+            custom_processed_text = f"이번 한 달간 {selected_en_name}(이)를 지도하며 선생님이 느낀 점은, 아이가 지닌 가능성과 성실함이 매우 기특하다는 것입니다. 앞으로도 든든한 페이스메이커가 되겠습니다."
         
         final_closing_ment = CLOSING_MENT_DB[selected_closing]
 
+        # 최종 피드백 템플릿 출력
         st.session_state.generated_feedback = f"""
-안녕하세요, {selected_en_name} 학부모님! 😊
-큐브어학원에서 이번 {selected_month} 한 달간 {selected_en_name}({selected_kr_name}) 학생과 함께 힘차게 달려온 학습 여정과 성장을 담은 {selected_month} 월말평가 리포트를 전해드립니다.
+안녕하세요, 큐브어학원입니다. 
+{selected_month} 한 달간 {selected_en_name}가 열심히 공부한 내용을 확인하는 월말평가가 있었습니다.  
+{selected_en_name} 얼마나 성장했는지, 또 어떤 부분을 조금 더 챙겨주면 좋을지 꼼꼼히 살펴보았습니다. 
+이번 평가를 통해 발견된 모습들과 앞으로의 지도 방향을 공유해 드립니다.
 
-■ 평가 대상 월: {selected_month}
 ■ 현재 레벨: {selected_level}
 ■ 학생 이름: {selected_en_name} ({selected_kr_name})
 ■ 영역별 평가 결과 (100점 만점 기준):
@@ -256,27 +313,33 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
 
 
 [1. 핵심 단원별 목표 성취 리포트]
-단순 정량 평가를 넘어, 이번 달 아이가 배운 구체적인 목표 달성도 분석입니다.
-{objective_narrative}
+이번 달 교재 학습을 통해 아이가 학습 했던 핵심 유닛별 목표와 달성도 분석입니다.
+
+💡 [이번 달 유닛별 상세 학습 목표]
+{objective_list_text.strip()}
+
+💡 [단원별 실제 성취도 다이어리]
+✔ {objective_narrative}
 
 
-[2. 학생 성향 및 긍정 태도 리포트]
-이번 한 달 동안 학원에서 세심하게 관찰한 {selected_en_name}의 다이어리입니다.
+[2. 학생 성향 및 태도 리포트]
 {positive_section}
 
 
-[3. 다음 레벨로의 성장을 위한 큐브만의 학생 개별 솔루션]
+[3. 큐브 케어 플랜]
+다음 레벨을 위한 큐브만의 촘촘한 개별 솔루션입니다.
 {care_plan_text}
 
+
 [4. 담당 강사 개별 밀착 소견]
-{custom_processed_text.strip()}
+우리 {selected_en_name}는 {custom_processed_text.strip()}
 
 
 {final_closing_ment}
 
 - 큐브어학원 드림 -
         """.strip()
-        st.success(f"{selected_month} 큐브어학원 명품 피드백 메세지가 완성되었습니다!")
+        st.success(f"{selected_month} 큐브어학원 명품 피드백 메세지가 성공적으로 빌드되었습니다!")
 
 if st.session_state.generated_feedback:
     st.divider()
