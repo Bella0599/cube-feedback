@@ -10,8 +10,8 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🏫 큐브어학원 월말평가 시스템 v20.5")
-st.markdown("구글 시트 연동형 교재 DB 및 파닉스/정규 레벨 이원화 내러티브 엔진")
+st.title("🏫 큐브어학원 월말평가 시스템 v20.6")
+st.markdown("구글 시트 연동형 교재 DB 및 파닉스/정규 레벨 맞춤형 내러티브 엔진")
 st.divider()
 
 # --- 1. 구글 시트 데이터 불러오기 ---
@@ -166,7 +166,13 @@ if is_phonics:
     
     # 파닉스 교재별 동적 타겟 리스트 매핑
     phonics_options = PHONICS_TARGETS_DB.get(primary_book, [])
-    primary_units = st.multiselect("이번 달 주요 성취 Target 음가/알파벳 선택", phonics_options, default=phonics_options[:4] if len(phonics_options) >= 4 else phonics_options)
+    
+    if test_range == "Final Test (Unit 1-8)":
+        # 파닉스 파이널의 경우 전체 범위가 대상이므로 기본적으로 전체 선택
+        primary_units = st.multiselect("학습 및 점검한 Target 음가/알파벳 (기본 전체 선택)", phonics_options, default=phonics_options)
+    else:
+        primary_units = st.multiselect("이번 달 주요 성취 Target 음가/알파벳 선택", phonics_options, default=phonics_options[:4] if len(phonics_options) >= 4 else phonics_options)
+    
     sub_book, sub_units, sub_score = None, [], ""
 else:
     st.markdown("**[주교재 성적]**")
@@ -188,7 +194,7 @@ else:
 # --- 5. 이번 달 유닛별 성취 유형 및 상세 분석 ---
 st.markdown("---")
 st.subheader("🎯 3. 이번 달 상세 성취도 다이어리 빌더")
-st.caption("입력하신 교재 점수를 기반으로 내러티브 엔진이 성취 대상을 자동 분류합니다.")
+st.caption("입력하신 교재 및 점수를 기반으로 내러티브 엔진이 성취 대상을 자동 분류합니다.")
 
 type1_well, type2_well, type2_bad, type3_well, type3_bad = [], [], [], [], []
 
@@ -198,19 +204,26 @@ else:
     p_score_num = parse_score(primary_score)
     label_subject = "음가/알파벳" if is_phonics else "단원"
     
-    if p_score_num >= 90:
-        st.markdown(f"🏆 **주교재 분석 유형 : 상위권 (90점 이상)**")
-        type1_well = st.multiselect(f"🥇 완벽하게 마스터하고 깊이 이해한 {label_subject} 선택 (복수 선택)", primary_units, default=primary_units)
-    elif p_score_num >= 75:
-        st.markdown(f"🌿 **주교재 분석 유형 : 중위권 (75점 ~ 89점)**")
-        col_t2_1, col_t2_2 = st.columns(2)
-        with col_t2_1: type2_well = st.multiselect(f"🟩 높은 이해도를 보이며 잘한 {label_subject}", primary_units)
-        with col_t2_2: type2_bad = st.multiselect(f"🟥 미세 보완이 필요한 {label_subject}", [u for u in primary_units if u not in type2_well])
+    # 💡 [추가된 로직] 파닉스 파이널 테스트일 경우 칭찬 베이스 + 부족한 부분만 입력
+    if is_phonics and test_range == "Final Test (Unit 1-8)":
+        st.markdown(f"🏆 **주교재 분석 유형 : 🌟 파닉스 Final Test (전체 성취 칭찬 및 미세 보완)**")
+        st.success("Final Test 특성상 긴 호흡의 전체적인 성취도를 칭찬합니다. 다음 레벨을 위해 미세하게 보완이 필요한 부분만 선택해 주세요.")
+        type2_bad = st.multiselect(f"🟧 개별 맞춤 복습이 조금 더 필요한 {label_subject} (없으면 비워두세요)", primary_units)
     else:
-        st.markdown(f"🌱 **주교재 분석 유형 : 집중 케어권 (74점 이하)**")
-        col_t3_1, col_t3_2 = st.columns(2)
-        with col_t3_1: type3_well = st.multiselect(f"🟦 어려운 와중에도 기특하게 잘 따라와 준 {label_subject}", primary_units)
-        with col_t3_2: type3_bad = st.multiselect(f"🟧 복습과 정교화 케어가 필요한 {label_subject}", [u for u in primary_units if u not in type3_well])
+        # 기존 점수별 성취 분기
+        if p_score_num >= 90:
+            st.markdown(f"🏆 **주교재 분석 유형 : 상위권 (90점 이상)**")
+            type1_well = st.multiselect(f"🥇 완벽하게 마스터하고 깊이 이해한 {label_subject} 선택 (복수 선택)", primary_units, default=primary_units)
+        elif p_score_num >= 75:
+            st.markdown(f"🌿 **주교재 분석 유형 : 중위권 (75점 ~ 89점)**")
+            col_t2_1, col_t2_2 = st.columns(2)
+            with col_t2_1: type2_well = st.multiselect(f"🟩 높은 이해도를 보이며 잘한 {label_subject}", primary_units)
+            with col_t2_2: type2_bad = st.multiselect(f"🟥 미세 보완이 필요한 {label_subject}", [u for u in primary_units if u not in type2_well])
+        else:
+            st.markdown(f"🌱 **주교재 분석 유형 : 집중 케어권 (74점 이하)**")
+            col_t3_1, col_t3_2 = st.columns(2)
+            with col_t3_1: type3_well = st.multiselect(f"🟦 어려운 와중에도 기특하게 잘 따라와 준 {label_subject}", primary_units)
+            with col_t3_2: type3_bad = st.multiselect(f"🟧 복습과 정교화 케어가 필요한 {label_subject}", [u for u in primary_units if u not in type3_well])
 
 # --- 6. 학생 성향 및 긍정 피드백 ---
 st.subheader("📊 4. 수업 태도 및 성향 피드백")
@@ -253,7 +266,8 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
         objective_list_text = ""
         if is_phonics:
             objective_list_text += f" - 평가 범위 유형: {test_range}\n"
-            objective_list_text += f" - 중점 점검 음가: {', '.join(primary_units)}\n"
+            if test_range != "Final Test (Unit 1-8)":
+                objective_list_text += f" - 중점 점검 음가: {', '.join(primary_units)}\n"
             objective_list_text += f" - 학습 목표: {primary_book} 기반의 핵심 타겟 발화 메커니즘 훈련 및 음가 직관력 인지"
             score_report = f"· {primary_book} ({test_range}) : {primary_score}점 / 100점"
         else:
@@ -269,21 +283,29 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
 
         p_score_num = parse_score(primary_score)
         
-        # 1. 주교재용 고유 코멘트 (파닉스용 단어 유연화 매핑)
+        # 1. 주교재용 고유 코멘트 구성 (파닉스 파이널 예외 처리 추가)
         primary_narrative = ""
         target_word = "음가" if is_phonics else "단원"
         
-        if p_score_num >= 90:
-            well_str = ", ".join(type1_well) if type1_well else f"이번 달 전 {target_word}"
-            primary_narrative = f"이번 달 주요 핵심 과정인 **[{well_str}]** 영역의 개념과 규칙을 깊이 있게 완벽하게 이해하고 소화해 냈습니다. 오답에 대한 피드백도 스펀지처럼 빠르게 흡수하여 탁월한 성취를 보여주었습니다. 우리 {selected_en_name}(이)에게 앞으로도 영어 공부가 더욱 즐겁고 깊이 있는 수업이 될 수 있도록 늘 칭찬하며 최선으로 노력하겠습니다."
-        elif p_score_num >= 75:
-            well_str = ", ".join(type2_well) if type2_well else "주요 학습"
-            bad_str = ", ".join(type2_bad) if type2_bad else f"일부 {target_word}"
-            primary_narrative = f"이번 달 과정 중 **[{well_str}]** 영역에서는 매우 높은 이해도를 보이며 안정적으로 과제를 수행해 냈습니다. 다만, 복습 과정 중 **[{bad_str}]** 부분에서는 개념적 규칙을 완벽히 정교하게 체화하는 데 있어 아주 미세하게 아쉬운 부분이 관찰되었습니다. 해당 영역은 다음 달에도 유기적인 연계 학습 및 꼼꼼한 반복 학습을 병행하여 부족한 틈새를 단단하게 다지고 완벽하게 채워가겠습니다."
+        if is_phonics and test_range == "Final Test (Unit 1-8)":
+            bad_str = ", ".join(type2_bad) if type2_bad else ""
+            primary_narrative = f"이번 파닉스 Final Test(Unit 1-8)를 통해 그동안 배운 긴 호흡의 과정을 종합적으로 점검한 결과, 1단원부터 8단원까지의 전체적인 음가와 규칙을 훌륭하게 마스터하고 뛰어난 언어적 이해도를 보여주었습니다. 포기하지 않고 성실하게 전체 단원을 마무리한 {selected_en_name}(이)를 크게 칭찬해 주고 싶습니다! "
+            if bad_str:
+                primary_narrative += f"다만, 더 완벽하고 단단한 다음 단계 도약을 위해 복습 시 **[{bad_str}]** 영역의 미세한 발음 및 규칙 적용 부분만 조금 더 신경 써서 1:1로 섬세하게 보완하겠습니다."
+            else:
+                primary_narrative += "모든 영역에서 빈틈없는 완벽한 성취를 보여주었으며, 이 단단한 기초를 바탕으로 다음 레벨에서도 흔들림 없이 훌륭한 모습을 이어갈 것이라 확신합니다."
         else:
-            well_str = ", ".join(type3_well) if type3_well else "기본 진도"
-            bad_str = ", ".join(type3_bad) if type3_bad else f"일부 {target_word}"
-            primary_narrative = f"이번 한 달 동안 다소 생소하고 어려울 수 있는 내용이었음에도 불구하고, **[{well_str}]** 부분은 지치지 않고 끝까지 기특하게 잘 따라와 주었습니다. 다만 학습 확장 단계인 **[{bad_str}]** 영역에서는 아직 규칙을 유연하게 적용하거나 소리를 정확하게 구별해 내는 데 다소 어려움을 보이고 있습니다. 수업 시간에 스스로 조금 힘들어하더라도 끝까지 강사의 설명에 집중하며 잘 따라오려는 예쁜 모습이 돋보이는 만큼, 밀착 클리닉을 통해 학습 자신감을 단단하게 회복하도록 돕겠습니다."
+            if p_score_num >= 90:
+                well_str = ", ".join(type1_well) if type1_well else f"이번 달 전 {target_word}"
+                primary_narrative = f"이번 달 주요 핵심 과정인 **[{well_str}]** 영역의 개념과 규칙을 깊이 있게 완벽하게 이해하고 소화해 냈습니다. 오답에 대한 피드백도 스펀지처럼 빠르게 흡수하여 탁월한 성취를 보여주었습니다. 우리 {selected_en_name}(이)에게 앞으로도 영어 공부가 더욱 즐겁고 깊이 있는 수업이 될 수 있도록 늘 칭찬하며 최선으로 노력하겠습니다."
+            elif p_score_num >= 75:
+                well_str = ", ".join(type2_well) if type2_well else "주요 학습"
+                bad_str = ", ".join(type2_bad) if type2_bad else f"일부 {target_word}"
+                primary_narrative = f"이번 달 과정 중 **[{well_str}]** 영역에서는 매우 높은 이해도를 보이며 안정적으로 과제를 수행해 냈습니다. 다만, 복습 과정 중 **[{bad_str}]** 부분에서는 개념적 규칙을 완벽히 정교하게 체화하는 데 있어 아주 미세하게 아쉬운 부분이 관찰되었습니다. 해당 영역은 다음 달에도 유기적인 연계 학습 및 꼼꼼한 반복 학습을 병행하여 부족한 틈새를 단단하게 다지고 완벽하게 채워가겠습니다."
+            else:
+                well_str = ", ".join(type3_well) if type3_well else "기본 진도"
+                bad_str = ", ".join(type3_bad) if type3_bad else f"일부 {target_word}"
+                primary_narrative = f"이번 한 달 동안 다소 생소하고 어려울 수 있는 내용이었음에도 불구하고, **[{well_str}]** 부분은 지치지 않고 끝까지 기특하게 잘 따라와 주었습니다. 다만 학습 확장 단계인 **[{bad_str}]** 영역에서는 아직 규칙을 유연하게 적용하거나 소리를 정확하게 구별해 내는 데 다소 어려움을 보이고 있습니다. 수업 시간에 스스로 조금 힘들어하더라도 끝까지 강사의 설명에 집중하며 잘 따라오려는 예쁜 모습이 돋보이는 만큼, 밀착 클리닉을 통해 학습 자신감을 단단하게 회복하도록 돕겠습니다."
 
         # 2. 부교재용 고유 코멘트 (독립 세트 보존)
         sub_narrative = ""
