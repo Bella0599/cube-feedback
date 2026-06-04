@@ -48,8 +48,8 @@ if "generated_feedback" not in st.session_state:
 
 # --- 💡 2. 데이터 및 템플릿 정의 ---
 PHONICS_BOOKS = ["Jungle Phonics 1", "Jungle Phonics 2", "Jungle Phonics 3", "Jungle Phonics 4"]
-BOOK1_LIST = ["Wonderful World B1", "Wonderful World B2", "Wonderful World B3", "Wonderful World B4", "English Trophy 3","English Trophy 4","English Trophy 5","English Trophy 6", "Reading Trophy 1", "Reading Trophy 2", "Reading Trophy 3"]
-BOOK2_LIST = ["Writing Monster 1", "Bricks Grammar B1", "Bricks Grammar 1"]
+BOOK1_LIST = ["English starship Starter", "Wonderful World B1", "Wonderful World B2", "Wonderful World B3", "Wonderful World B4", "English Trophy 3","English Trophy 4","English Trophy 5","English Trophy 6", "Reading Trophy 1", "Reading Trophy 2", "Reading Trophy 3"]
+BOOK2_LIST = ["Writing Monster 1","Writing Monster 2","Writing Monster 3", "English starship 1", "English starship 2",  "English starship 3", "ELT Grammar Starter 1", "ELT Grammar Starter 2", "Bricks Grammar 1","Bricks Grammar 3"]
 UNITS = [f"Unit {i}" for i in range(1, 13)]
 MONTHS = [f"{i}월" for i in range(1, 13)]
 
@@ -98,13 +98,13 @@ TRAITS_CATEGORIES = {
 
 TEACHER_TEMPLATES = {
     "선택 안 함 (아래 직접 입력)": "",
-    "🌱 [기초/격려] 과정 중심의 응원 (태도 칭찬)": "지금 당장 눈에 보이는 큰 점수보다 중요한 건 {name}가 포기하지 않고 영어를 대하는 태도입니다. 기초를 다지는 지금의 시간이 훗날 {name}(이)가 영어를 즐길 수 있는 가장 든든한 밑거름이 될 거예요. {name}(이)의 속도에 맞춰, 저도 포기하지 않고 끝까지 함께 걷겠습니다.",
-    "🌱 [기초/격려] 작은 성취 칭찬 (자신감 부여)": "오늘 수업 중 {name}가 스스로 문장을 읽어낸 순간이 있었습니다. 그 작은 성공들이 모여 큰 자신감이 될 거예요. 지금은 틀리는 것이 너무나 당연한 과정이니, {name}(이)가 주눅 들지 않고 계속 도전할 수 있도록 댁에서도 따뜻한 응원 부탁드립니다.",
-    "🌱 [기초/격려] 공감과 믿음 전달": "영어를 처음 익히며 {name}가 겪는 어려움들을 저 또한 충분히 공감하고 있습니다. 아이가 어려워하는 부분을 하나씩 세심하게 채워가다 보면, 어느새 영어와 친구가 되어있는 {name}(이)를 발견하실 거예요. 학부모님의 믿음이 아이에게는 무엇보다 큰 힘이 됩니다.",
+    "🌱 [기초/격려] 과정 중심의 응원 (태도 칭찬)": "지금 당장 눈에 보이는 큰 점수보다 중요한 건 {name}가 포기하지 않고 영어를 대하는 태도입니다. 기초를 다지는 지금의 시간이 훗날 {name}가 영어를 즐길 수 있는 가장 든든한 밑거름이 될 거예요. {name}의 속도에 맞춰, 저도 포기하지 않고 끝까지 함께 걷겠습니다.",
+    "🌱 [기초/격려] 작은 성취 칭찬 (자신감 부여)": "오늘 수업 중 {name}가 스스로 문장을 읽어낸 순간이 있었습니다. 그 작은 성공들이 모여 큰 자신감이 될 거예요. 지금은 틀리는 것이 너무나 당연한 과정이니, {name}가 주눅 들지 않고 계속 도전할 수 있도록 댁에서도 따뜻한 응원 부탁드립니다.",
+    "🌱 [기초/격려] 공감과 믿음 전달": "영어를 처음 익히며 {name}가 겪는 어려움들을 저 또한 충분히 공감하고 있습니다. 아이가 어려워하는 부분을 하나씩 세심하게 채워가다 보면, 어느새 영어와 친구가 되어있는 {name}를 발견하실 거예요. 학부모님의 믿음이 아이에게는 무엇보다 큰 힘이 됩니다.",
     
     "🌿 [중간/도약] 성실함 인정과 확신": "수업에 임하는 {name}의 모습에서 매달 깊은 신뢰를 느낍니다. 성실함은 그 무엇보다 강력한 실력입니다. 지금처럼 기본기를 착실히 다져간다면, 머지않아 더 높은 도약의 순간을 맞이하게 될 것이라 확신합니다.",
     "🌿 [중간/도약] 한 단계 성장 가능성": "우리 {name}는 지금 한 단계 더 성장하기 위해 힘차게 날갯짓하는 중입니다. 조금만 더 힘을 내서 지금의 노력을 유지한다면, 더 복잡한 문장도 자유롭게 다루는 모습을 보실 수 있을 거예요. 제가 아이의 성장을 곁에서 가장 가까이 돕겠습니다.",
-    "🌿 [중간/도약] 긍정적 학습 습관 칭찬": "예전보다 학습 태도가 훨씬 의젓해졌습니다. 스스로 공부하려는 의지가 눈에 띄게 좋아진 점이 무척 대견하네요. 지금처럼 올바른 학습 습관을 차곡차곡 쌓아가다 보면, 영어 공부가 {name}(이)에게 더 즐거운 도전이 될 것입니다.",
+    "🌿 [중간/도약] 긍정적 학습 습관 칭찬": "예전보다 학습 태도가 훨씬 의젓해졌습니다. 스스로 공부하려는 의지가 눈에 띄게 좋아진 점이 무척 대견하네요. 지금처럼 올바른 학습 습관을 차곡차곡 쌓아가다 보면, 영어 공부가 {name}에게 더 즐거운 도전이 될 것입니다.",
     
     "🌳 [우수/심화] 더 높은 곳을 향한 심화 도전": "현재 실력에 안주하지 않고 더 깊이 있는 내용을 이해하려는 {name}의 열정이 참 멋집니다. 이제는 조금 더 난도가 높은 심화 과정으로 아이의 가능성을 넓혀보려 합니다. 아이의 잠재력이 더 넓은 세상에서 활짝 피어날 수 있도록 이끌겠습니다.",
     "🌳 [우수/심화] 문제 해결 능력과 자부심 고취": "오늘 수업에서 {name}가 보여준 문제 해결 능력은 저도 감탄할 정도였습니다. 영어를 단순히 지식으로 습득하는 것을 넘어, 자신의 생각을 조리 있게 표현하는 단계로 멋지게 진입하고 있네요. 아이가 영어에 대해 큰 자부심을 느낄 수 있도록 아낌없이 칭찬해 주세요.",
@@ -289,7 +289,7 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
         
         if is_phonics and test_range == "Final Test (Unit 1-8)":
             bad_str = ", ".join(type2_bad) if type2_bad else ""
-            primary_narrative = f"이번 파닉스 Final Test(Unit 1-8)를 통해 그동안 배운 긴 호흡의 과정을 종합적으로 점검한 결과, 1단원부터 8단원까지의 전체적인 음가와 규칙을 훌륭하게 마스터하고 뛰어난 언어적 이해도를 보여주었습니다. 포기하지 않고 성실하게 전체 단원을 마무리한 {selected_en_name}(이)를 크게 칭찬해 주고 싶습니다! "
+            primary_narrative = f"이번 파닉스 Final Test(Unit 1-8)를 통해 그동안 배운 긴 호흡의 과정을 종합적으로 점검한 결과, 1단원부터 8단원까지의 전체적인 음가와 규칙을 훌륭하게 마스터하고 뛰어난 언어적 이해도를 보여주었습니다. 포기하지 않고 성실하게 전체 단원을 마무리한 {selected_en_name}를 크게 칭찬해 주고 싶습니다! "
             if bad_str:
                 primary_narrative += f"다만, 더 완벽하고 단단한 다음 단계 도약을 위해 복습 시 [{bad_str}] 영역의 미세한 발음 및 규칙 적용 부분만 조금 더 신경 써서 1:1로 섬세하게 보완하겠습니다."
             else:
@@ -297,7 +297,7 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
         else:
             if p_score_num >= 90:
                 well_str = ", ".join(type1_well) if type1_well else f"이번 달 전 {target_word}"
-                primary_narrative = f"이번 달 주요 핵심 과정인 {well_str}영역의 개념과 규칙을 깊이 있게 완벽하게 이해하고 소화해 냈습니다. 오답에 대한 피드백도 스펀지처럼 빠르게 흡수하여 탁월한 성취를 보여주었습니다. 우리 {selected_en_name}(이)에게 앞으로도 영어 공부가 더욱 즐겁고 깊이 있는 수업이 될 수 있도록 늘 칭찬하며 최선으로 노력하겠습니다."
+                primary_narrative = f"이번 달 주요 핵심 과정인 {well_str}영역의 개념과 규칙을 깊이 있게 완벽하게 이해하고 소화해 냈습니다. 오답에 대한 피드백도 스펀지처럼 빠르게 흡수하여 탁월한 성취를 보여주었습니다. 우리 {selected_en_name}에게 앞으로도 영어 공부가 더욱 즐겁고 깊이 있는 수업이 될 수 있도록 늘 칭찬하며 최선으로 노력하겠습니다."
             elif p_score_num >= 75:
                 well_str = ", ".join(type2_well) if type2_well else "주요 학습"
                 bad_str = ", ".join(type2_bad) if type2_bad else f"일부 {target_word}"
@@ -351,7 +351,7 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
         st.session_state.generated_feedback = f"""
 안녕하세요, 큐브어학원입니다. 
 {selected_month} 한 달간 {selected_en_name}가 열심히 공부한 내용을 확인하는 월말평가가 있었습니다.  
-{selected_en_name} 얼마나 성장했는지, 또 어떤 부분을 조금 더 챙겨주면 좋을지 꼼꼼히 살펴보았습니다. 
+{selected_en_name}가 얼마나 성장했는지, 또 어떤 부분을 조금 더 챙겨주면 좋을지 꼼꼼히 살펴보았습니다. 
 이번 평가를 통해 발견된 모습들과 앞으로의 지도 방향을 공유해 드립니다.
 
 ■ 현재 레벨: {selected_level}
@@ -361,7 +361,7 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
 
 
 [1. 핵심 단원별 목표 성취 리포트]
-이번 달 교재 학습을 통해 아이가 학습 했던 핵심 유닛별 목표와 달성도 분석입니다.
+이번 달 교재 학습을 통해 아이가 학습 했던 유닛 목표와 달성도 분석입니다.
 
 💡 [이번 달 상세 학습 목표 및 범위]
 {objective_list_text.strip()}
