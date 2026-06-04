@@ -56,9 +56,9 @@ MONTHS = [f"{i}월" for i in range(1, 13)]
 # [파닉스 전용] 단계별 세부 음가 리스트 구성
 PHONICS_TARGETS_DB = {
     "Jungle Phonics 1": [chr(i) for i in range(65, 91)], # A ~ Z
-    "Jungle Phonics 2": ["ad", "at", "an", "am", "ap", "ag", "ed", "en", "et", "ig", "in", "ip", "og", "op", "ot", "ug", "un", "ut"], # 단모음 시리즈
-    "Jungle Phonics 3": ["ade", "ate", "ake", "ame", "ave", "ide", "ike", "ine", "ive", "ole", "one", "ope", "ute", "une"], # 장모음 시리즈
-    "Jungle Phonics 4": ["bl", "cl", "fl", "pl", "gl", "sl", "br", "cr", "fr", "pr", "gr", "tr", "sm", "sn", "sp", "st", "sw", "ch", "sh", "th", "wh"] # 이중자음/이중모음 시리즈
+    "Jungle Phonics 2": ["an", "ap", "at", "ad", "ag", "am", "en", "et", "ed", "eg", "ib", "id", "ig", "in", "ip", "it", "ix", "ot", "op", "og", "ox", "ug", "up", "ud", "um", "ub", "un", "ut"], # 단모음 시리즈
+    "Jungle Phonics 3": ["ame", "ake", "ate", "ave", "ane", "ape", "ase", "ine", "ike", "ide", "ite", "ive", "ime", "ipe", "ole", "one", "ose", "ope", "ote", "ome", "une", "ule", "ube", "ute", "use",], # 장모음 시리즈
+    "Jungle Phonics 4": ["bl", "cl", "fl", "pl", "br", "cr", "fr", "pr", "sn", "sw", "nk", "ng", "sh", "ch", "wh", "ai", "ay", "ea", "ee", "oa", "ow", "oi", "oy", "oo", "ou", "ar", "or", "er", "ir", "ur"] # 이중자음/이중모음 시리즈
 }
 
 def get_auto_objective(book, unit, book_dataframe):
@@ -86,7 +86,7 @@ DIAGNOSIS_DB = {
         "틀릴까 봐 목소리가 작아지는 현상": "스스로 큰 소리 내어 읽어보는 발화 연습이 중요하지만, 틀릴까 봐 목소리가 작아지는 경향이 있습니다. 학원에서도 격려를 아끼지 않겠으니, 댁에서도 아이가 자신 있게 읽을 수 있도록 많은 응원 부탁드립니다."
     },
     "Reading (독해/리딩)": {"글의 메인 아이디어(주제) 파악 어려움": "지문을 읽은 후 스스로 한 줄 제목을 달아보거나 중심 문장을 찾아내는 훈련을 통해, 글의 거시적인 흐름을 짚어내는 능력을 키우겠습니다.", "세부 내용 찾기 실수": "문제를 먼저 분석한 뒤 지문에서 단서를 역추적하는 스캐닝 기술을 보완하여 실전 오답률을 낮추겠습니다."},
-    "Grammar (문법)": {"be동사와 일반동사 쓰임 혼동": "두 동사의 핵심 차이점을 직관적으로 인지시키고, 문장 구조 드릴 학습을 강화하겠습니다."},
+    "Grammar (문법)": {"be동사와 일반동사 쓰임 혼동": "두 동사의 핵심 차이점을 직관적으로 인지시키고, 문장 구조 드릴 학습을 강화하겠습니다.","수일치":"단수와 복수의 개념을 확실히 인지하고 쓰기에서도 응용할수 있도록 지도 하겠습니다." },
     "Writing (영작)": {"대소문자 및 문장 부호 누락": "글쓰기의 기본인 문장 부호 규칙을 강조하고, 작성을 마친 문장을 스스로 피드백하며 정교함을 기르도록 지도하겠습니다."}
 }
 
@@ -297,15 +297,15 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
         else:
             if p_score_num >= 90:
                 well_str = ", ".join(type1_well) if type1_well else f"이번 달 전 {target_word}"
-                primary_narrative = f"이번 달 주요 핵심 과정인 {well_str}영역의 개념과 규칙을 깊이 있게 완벽하게 이해하고 소화해 냈습니다. 오답에 대한 피드백도 스펀지처럼 빠르게 흡수하여 탁월한 성취를 보여주었습니다. 우리 {selected_en_name}에게 앞으로도 영어 공부가 더욱 즐겁고 깊이 있는 수업이 될 수 있도록 늘 칭찬하며 최선으로 노력하겠습니다."
+                primary_narrative = f" {well_str}에서 어휘, 어법, 내용을 깊이 있게 완벽하게 이해하고 소화해 냈습니다. 오답에 대한 피드백도 스펀지처럼 빠르게 흡수하여 탁월한 성취를 보여주었습니다. 우리 {selected_en_name}에게 앞으로도 영어 공부가 더욱 즐겁고 깊이 있는 수업이 될 수 있도록 늘 칭찬하며 최선으로 노력하겠습니다."
             elif p_score_num >= 75:
                 well_str = ", ".join(type2_well) if type2_well else "주요 학습"
                 bad_str = ", ".join(type2_bad) if type2_bad else f"일부 {target_word}"
-                primary_narrative = f"이번 달 과정 중 {well_str}영역에서는 매우 높은 이해도를 보이며 안정적으로 과제를 수행해 냈습니다. 다만, 복습 과정 중 {bad_str}부분에서는 개념적 규칙을 완벽히 정교하게 체화하는 데 있어 아주 미세하게 아쉬운 부분이 관찰되었습니다. 해당 영역은 다음 달에도 유기적인 연계 학습 및 꼼꼼한 반복 학습을 병행하여 부족한 틈새를 단단하게 다지고 완벽하게 채워가겠습니다."
+                primary_narrative = f"이번 달 과정 중 {well_str}영역에서는 매우 높은 이해도를 보이며 안정적으로 과제를 수행해 냈습니다. 다만, {bad_str}부분에서는 개념적 규칙을 완벽히 정교하게 체화하는 데 있어 아주 미세하게 아쉬운 부분이 관찰되었습니다. 해당 영역은 다음 달에도 유기적인 연계 학습 및 꼼꼼한 반복 학습을 병행하여 부족한 틈새를 단단하게 다지고 완벽하게 채워가겠습니다."
             else:
                 well_str = ", ".join(type3_well) if type3_well else "기본 진도"
                 bad_str = ", ".join(type3_bad) if type3_bad else f"일부 {target_word}"
-                primary_narrative = f"이번 한 달 동안 다소 생소하고 어려울 수 있는 내용이었음에도 불구하고, {well_str} 부분은 지치지 않고 끝까지 기특하게 잘 따라와 주었습니다. 다만 학습 확장 단계인 {bad_str} 영역에서는 아직 규칙을 유연하게 적용하거나 소리를 정확하게 구별해 내는 데 다소 어려움을 보이고 있습니다. 수업 시간에 스스로 조금 힘들어하더라도 끝까지 강사의 설명에 집중하며 잘 따라오려는 예쁜 모습이 돋보이는 만큼, 밀착 클리닉을 통해 학습 자신감을 단단하게 회복하도록 돕겠습니다."
+                primary_narrative = f"이번 한 달 동안 새롭고 다소 어려울 수 있는 내용을 배우는 과정에서도, {well_str} 부분은 성실하게 참여하며 끝까지 노력하는 모습을 보여주었습니다. 다만 {bad_str} 영역에서는 개념을 적용하거나 구별하는 데 아직 어려움이 있어 추가적인 연습이 필요합니다. 수업 시간에 꾸준히 집중하며 배우려는 태도가 돋보이는 만큼, 개별 피드백과 반복 학습을 통해 자신감을 높이고 실력을 향상시킬 수 있도록 돕겠습니다."
 
         # 2. 부교재용 고유 코멘트 (독립 세트 보존)
         sub_narrative = ""
@@ -324,7 +324,7 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
         u_sentence = UNDERSTAND_TEXTS[rating_understand]
         p_sentence = PRESENT_TEXTS[rating_present]
         f_sentence = FOCUS_TEXTS[rating_focus]
-        traits_text = f"\n특히 {selected_en_name}(이)는 평소 학원에서 " + " ".join(selected_traits) if selected_traits else ""
+        traits_text = f"\n특히 {selected_en_name}는 평소 학원에서 " + " ".join(selected_traits) if selected_traits else ""
         positive_section = f"- {u_sentence}\n- {p_sentence}\n- {f_sentence}{traits_text}"
 
         # 케어 플랜 생성
@@ -350,8 +350,7 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
         # 최종 피드백 템플릿 출력
         st.session_state.generated_feedback = f"""
 안녕하세요, 큐브어학원입니다. 
-{selected_month} 한 달간 {selected_en_name}가 열심히 공부한 내용을 확인하는 월말평가가 있었습니다.  
-{selected_en_name}가 얼마나 성장했는지, 또 어떤 부분을 조금 더 챙겨주면 좋을지 꼼꼼히 살펴보았습니다. 
+{selected_month} 월말평가를 통해 {selected_en_name}의 학습 성과와 성장 과정을 확인하고, 앞으로 보완하면 좋을 부분까지 함께 점검해 보았습니다.
 이번 평가를 통해 발견된 모습들과 앞으로의 지도 방향을 공유해 드립니다.
 
 ■ 현재 레벨: {selected_level}
