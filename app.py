@@ -17,7 +17,7 @@ st.divider()
 
 # --- 0. 구글 시트 데이터 불러오기 (캐싱 적용) ---
 @st.cache_data(ttl=600)
-def load_sheet_data():
+def load_sheet_data():https://docs.google.com/spreadsheets/d/1xwfmM8VELPoMktF7pZugYZxSbf8SCSGo2Ur7DIFCT9E/edit?usp=sharing
     try:
         # [구글 시트 연동] 원장님의 실제 시트 데이터 구조에 맞게 연동하시면 됩니다.
         # 아래는 테스트 및 구동 확인을 위한 가상 데이터입니다.
