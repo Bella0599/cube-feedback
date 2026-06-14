@@ -19,14 +19,14 @@ sheet_url = "https://docs.google.com/spreadsheets/d/1xwfmM8VELPoMktF7pZugYZxSbf8
 
 try:
     @st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
-    def load_student_data(url):
+    def load_students_data(url):
         csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
         data = pd.read_csv(csv_url)
         data = data.dropna(subset=['레벨', '한국어이름'])
         return data
         
     @st.cache_data(show_spinner="구글 시트에서 교재 학습목표 DB를 동기화 중입니다...")
-    def load_book_data(url):
+    def load_books_data(url):
         try:
             csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=books"
             book_df = pd.read_csv(csv_url)
