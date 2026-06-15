@@ -495,5 +495,3 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
 if st.session_state.generated_feedback:
     st.divider()
     st.text_area("📋 완성된 피드백 (마우스로 클릭하여 전체 복사 가능)", value=st.session_state.generated_feedback, height=800)
-
-```
