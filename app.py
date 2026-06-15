@@ -17,32 +17,35 @@ st.divider()
 # --- 1. 구글 시트 데이터 불러오기 ---
 sheet_url = "https://docs.google.com/spreadsheets/d/1xwfmM8VELPoMktF7pZugYZxSbf8SCSGo2Ur7DIFCT9E/edit?usp=sharing"
 
-try:
-    @st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
-    def load_students_data(url):
-        csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
-        data = pd.read_csv(csv_url)
-        data = data.dropna(subset=['레벨', '한국어이름'])
-        return data
+# 함수는 try 구문 밖으로 빼내어 Streamlit 캐싱이 정상 작동하도록 수정
+@st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
+def load_students_data(url):
+    csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
+    data = pd.read_csv(csv_url)
+    # 영어이름 컬럼이 없을 경우를 대비한 안전장치
+    if '영어이름' not in data.columns:
+        data['영어이름'] = '이름없음'
+    data = data.dropna(subset=['레벨', '한국어이름'])
+    return data
         
-    @st.cache_data(show_spinner="구글 시트에서 교재 학습목표 DB를 동기화 중입니다...")
-    def load_books_data(url):
-        try:
-            csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=books"
-            book_df = pd.read_csv(csv_url)
-            book_df['교재'] = book_df['교재'].astype(str).str.strip()
-            book_df['유닛'] = book_df['유닛'].astype(str).str.strip()
-            book_df['학습목표'] = book_df['학습목표'].astype(str).str.strip()
-            return book_df
-        except:
-            return pd.DataFrame(columns=['교재', '유닛', '학습목표'])
+@st.cache_data(show_spinner="구글 시트에서 교재 학습목표 DB를 동기화 중입니다...")
+def load_books_data(url):
+    try:
+        csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=books"
+        book_df = pd.read_csv(csv_url)
+        book_df['교재'] = book_df['교재'].astype(str).str.strip()
+        book_df['유닛'] = book_df['유닛'].astype(str).str.strip()
+        book_df['학습목표'] = book_df['학습목표'].astype(str).str.strip()
+        return book_df
+    except:
+        return pd.DataFrame(columns=['교재', '유닛', '학습목표'])
 
-    # 오류 수정: 함수 이름 일치 (s 추가)
+try:
     df = load_students_data(sheet_url)
     df_books = load_books_data(sheet_url)
 except Exception as e:
     st.error(f"구글 시트 연결 또는 데이터 처리 중 오류가 발생했습니다: {e}")
-    st.info("시트 주소, 탭 이름(students, books), 또는 컬럼명('레벨', '한국어이름')을 확인해 주세요.")
+    st.info("시트 주소, 탭 이름(students, books), 또는 필수 컬럼명('레벨', '한국어이름')을 확인해 주세요.")
     st.stop()
 
 if "generated_feedback" not in st.session_state:
@@ -213,7 +216,7 @@ with col1: selected_month = st.selectbox("평가 월", MONTHS, index=4)
 with col2: selected_level = st.selectbox("현재 레벨", df['레벨'].unique().tolist())
 with col3:
     filtered_df = df[df['레벨'] == selected_level].copy()
-    filtered_df['student_label'] = filtered_df['영어이름'].fillna('이름없음').astype(str) + " (" + filtered_df['한국어이름'].astype(str) + ")"
+    filtered_df['student_label'] = filtered_df['영어이름'].astype(str) + " (" + filtered_df['한국어이름'].astype(str) + ")"
     selected_student = st.selectbox("학생 선택", filtered_df['student_label'].tolist())
 
 selected_en_name, selected_kr_name = "", ""
@@ -418,7 +421,6 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
                 primary_narrative = f"이번 달 새로 배운 과정이 다소 어려울 수 있는 내용이었음에도 불구하고, {well_str}부분을 끝까지 잘 따라와 주었습니다. 또한 수업 시간에 설명을 집중해서 들으며 이해하려고 노력하는 모습이 돋보였습니다. 작은 성공 경험들이 쌓이며 점차 자신감을 얻어가고 있습니다."
 
         sub_narrative = ""
-        # 부교재 서술 로직 업데이트 (선택된 내용 반영)
         if sub_book and sub_book != "선택안함":
             if selected_sub_narrative:
                 sub_narrative = f"\n\n또한, {sub_book} 학습 과정에서도 유의미한 성장이 있었습니다. {selected_sub_narrative}"
