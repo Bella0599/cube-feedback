@@ -1,16 +1,16 @@
-def load_students_data(url):
-    csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
-    
-    # 💡 디버깅: 파이썬이 가져온 '원문'이 무엇인지 바로 확인
-    import requests
-    response = requests.get(csv_url)
-    st.write("--- 파이썬이 받아온 원문 시작 ---")
-    st.text(response.text[:500]) # 가져온 데이터의 앞부분 500자만 출력
-    st.write("--- 파이썬이 받아온 원문 끝 ---")
-    
-    # 여기서 원문에 '<!DOCTYPE html>' 같은 글자가 보인다면? 
-    # -> 구글이 로그인 페이지를 띄운 것입니다. (권한/게시 문제)
-    
+import streamlit as st
+import pandas as pd
+
+st.title("연결 상태 테스트")
+
+sheet_url = "https://docs.google.com/spreadsheets/d/1xwfmM8VELPoMktF7pZugYZxSbf8SCSGo2Ur7DIFCT9E/edit?usp=sharing"
+csv_url = sheet_url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
+
+try:
+    st.write("데이터 가져오는 중...")
     data = pd.read_csv(csv_url)
-    data.columns = data.columns.str.strip()
-    return data
+    st.write("데이터 가져오기 성공!")
+    st.dataframe(data.head()) # 데이터가 보이면 성공입니다.
+except Exception as e:
+    st.error(f"오류 발생: {e}")
+    st.write("주소 확인: ", csv_url)
