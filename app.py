@@ -18,7 +18,7 @@ st.divider()
 sheet_url = "https://docs.google.com/spreadsheets/d/1xwfmM8VELPoMktF7pZugYZxSbf8SCSGo2Ur7DIFCT9E/edit?usp=sharing"
 
 try:
-   @st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
+@st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
     def load_students_data(url):
         csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
         
@@ -34,7 +34,6 @@ try:
         # 3. 데이터 정제
         data = data.dropna(subset=['레벨', '한국어이름'])
         return data
-        
     @st.cache_data(show_spinner="구글 시트에서 교재 학습목표 DB를 동기화 중입니다...")
     def load_books_data(url):
         try:
