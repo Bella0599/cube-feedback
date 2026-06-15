@@ -14,23 +14,23 @@ st.title("🏫 큐브어학원 월말평가 시스템 v22.2")
 st.markdown("구글 시트 연동형 교재 DB 및 프리미엄 7대 성향 키워드 밀착 피드백 엔진 (부교재 확장판)")
 st.divider()
 
-
-# --- 1. 구글 시트 데이터 불러오기 ---
+# --- 1. 구글 시트 데이터 불러오기 (구조 개선: 함수를 try 밖으로 분리) ---
 sheet_url = "https://docs.google.com/spreadsheets/d/1xwfmM8VELPoMktF7pZugYZxSbf8SCSGo2Ur7DIFCT9E/edit?usp=sharing"
 
 @st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
 def load_students_data(url):
     csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
     data = pd.read_csv(csv_url)
-    data.columns = data.columns.str.strip()  # 컬럼명 공백 제거
+    data.columns = data.columns.str.strip() # [오류해결] 컬럼명 공백 제거
+    data = data.dropna(subset=['레벨', '한국어이름'])
     return data
-    
+        
 @st.cache_data(show_spinner="구글 시트에서 교재 학습목표 DB를 동기화 중입니다...")
 def load_books_data(url):
     try:
         csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=books"
         book_df = pd.read_csv(csv_url)
-        book_df.columns = book_df.columns.str.strip()
+        book_df.columns = book_df.columns.str.strip() # [오류해결] 컬럼명 공백 제거
         book_df['교재'] = book_df['교재'].astype(str).str.strip()
         book_df['유닛'] = book_df['유닛'].astype(str).str.strip()
         book_df['학습목표'] = book_df['학습목표'].astype(str).str.strip()
@@ -38,46 +38,8 @@ def load_books_data(url):
     except:
         return pd.DataFrame(columns=['교재', '유닛', '학습목표'])
 
-# 여기서 데이터를 불러옵니다. (여기부터는 들여쓰기가 없습니다)
+# 데이터 로딩 시도 (함수 밖에서 실행)
 try:
-    df = load_students_data(sheet_url)
-    df_books = load_books_data(sheet_url)
-    df = df.dropna(subset=['레벨', '한국어이름'])
-except Exception as e:
-    st.error(f"구글 시트 연결 오류: {e}")
-    st.stop()        
-    @st.cache_data(show_spinner="구글 시트에서 교재 학습목표 DB를 동기화 중입니다...")
-    def load_books_data(url):
-        try:
-            csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=books"
-            book_df = pd.read_csv(csv_url)
-            book_df.columns = book_df.columns.str.strip() # 공백 제거
-            book_df['교재'] = book_df['교재'].astype(str).str.strip()
-            book_df['유닛'] = book_df['유닛'].astype(str).str.strip()
-            book_df['학습목표'] = book_df['학습목표'].astype(str).str.strip()
-            return book_df
-        except:
-            return pd.DataFrame(columns=['교재', '유닛', '학습목표'])
-
-    # 함수 호출
-    df = load_students_data(sheet_url)
-    df_books = load_books_data(sheet_url)
-
-
-    @st.cache_data(show_spinner="구글 시트에서 교재 학습목표 DB를 동기화 중입니다...")
-    def load_books_data(url):
-        try:
-            csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=books"
-            book_df = pd.read_csv(csv_url)
-            # 여기도 동일하게 공백 제거 적용
-            book_df.columns = book_df.columns.str.strip()
-            book_df['교재'] = book_df['교재'].astype(str).str.strip()
-            book_df['유닛'] = book_df['유닛'].astype(str).str.strip()
-            book_df['학습목표'] = book_df['학습목표'].astype(str).str.strip()
-            return book_df
-        except:
-            return pd.DataFrame(columns=['교재', '유닛', '학습목표'])
-
     df = load_students_data(sheet_url)
     df_books = load_books_data(sheet_url)
 except Exception as e:
@@ -85,6 +47,7 @@ except Exception as e:
     st.info("시트 주소, 탭 이름(students, books), 또는 컬럼명('레벨', '한국어이름')을 확인해 주세요.")
     st.stop()
 
+# --- 이하 사용자님의 원본 로직을 그대로 보존했습니다 ---
 if "generated_feedback" not in st.session_state:
     st.session_state.generated_feedback = ""
 
