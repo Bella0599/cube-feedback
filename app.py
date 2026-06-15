@@ -14,26 +14,37 @@ st.title("🏫 큐브어학원 월말평가 시스템 v22.2")
 st.markdown("구글 시트 연동형 교재 DB 및 프리미엄 7대 성향 키워드 밀착 피드백 엔진 (부교재 확장판)")
 st.divider()
 
+
 # --- 1. 구글 시트 데이터 불러오기 ---
 sheet_url = "https://docs.google.com/spreadsheets/d/1xwfmM8VELPoMktF7pZugYZxSbf8SCSGo2Ur7DIFCT9E/edit?usp=sharing"
 
 try:
-@st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
+    @st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
     def load_students_data(url):
         csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
-        
-        # 1. 쉼표(,)를 기준으로 데이터를 명확히 분리하여 읽어옵니다. (header=0은 첫 줄을 제목으로 쓴다는 뜻)
-        data = pd.read_csv(csv_url, sep=',', header=0)
-        
-        # 2. 컬럼명 앞뒤 공백 제거
-        data.columns = data.columns.str.strip()
-        
-        # 💡 디버깅: 레벨에 어떤 값들이 들어있는지 확인 (화면에 출력됨)
-        # st.write("확인된 레벨 목록:", data['레벨'].unique()) 
-        
-        # 3. 데이터 정제
+        data = pd.read_csv(csv_url)
+        data.columns = data.columns.str.strip() # 공백 제거
         data = data.dropna(subset=['레벨', '한국어이름'])
         return data
+        
+    @st.cache_data(show_spinner="구글 시트에서 교재 학습목표 DB를 동기화 중입니다...")
+    def load_books_data(url):
+        try:
+            csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=books"
+            book_df = pd.read_csv(csv_url)
+            book_df.columns = book_df.columns.str.strip() # 공백 제거
+            book_df['교재'] = book_df['교재'].astype(str).str.strip()
+            book_df['유닛'] = book_df['유닛'].astype(str).str.strip()
+            book_df['학습목표'] = book_df['학습목표'].astype(str).str.strip()
+            return book_df
+        except:
+            return pd.DataFrame(columns=['교재', '유닛', '학습목표'])
+
+    # 함수 호출
+    df = load_students_data(sheet_url)
+    df_books = load_books_data(sheet_url)
+
+
     @st.cache_data(show_spinner="구글 시트에서 교재 학습목표 DB를 동기화 중입니다...")
     def load_books_data(url):
         try:
