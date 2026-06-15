@@ -18,12 +18,24 @@ st.divider()
 # --- 1. 구글 시트 데이터 불러오기 ---
 sheet_url = "https://docs.google.com/spreadsheets/d/1xwfmM8VELPoMktF7pZugYZxSbf8SCSGo2Ur7DIFCT9E/edit?usp=sharing"
 
-try:
-    @st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
+@st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
     def load_students_data(url):
         csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
         data = pd.read_csv(csv_url)
-        data.columns = data.columns.str.strip() # 공백 제거
+        
+        # 1. 컬럼명 앞뒤 공백 제거
+        data.columns = data.columns.str.strip()
+        
+        # 2. [강제 설정] 파이썬이 제목을 못 찾으면, 그냥 0번째 열을 '레벨', 1번째 열을 '한국어이름'으로 강제 지정합니다.
+        # 시트의 A열이 레벨, B열이 한국어이름인 것을 코드에 직접 박아버리는 방식입니다.
+        if len(data.columns) >= 2:
+            data = data.rename(columns={data.columns[0]: '레벨', data.columns[1]: '한국어이름'})
+            
+        # 3. 만약 이름이 여전히 안 맞으면 화면에 알려줌
+        if '레벨' not in data.columns or '한국어이름' not in data.columns:
+            st.error(f"오류: 컬럼명이 안 맞습니다. 현재 인식된 컬럼: {data.columns.tolist()}")
+            st.stop()
+            
         data = data.dropna(subset=['레벨', '한국어이름'])
         return data
         
