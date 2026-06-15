@@ -21,22 +21,15 @@ try:
     @st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
     def load_students_data(url):
         csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
-        data = pd.read_csv(csv_url)
         
-        # 1. 컬럼명 공백 강제 제거
-        data.columns = data.columns.str.strip()
+        # 1. 데이터를 불러올 때 구분자가 쉼표(,)임을 명시적으로 알려줍니다.
+        data = pd.read_csv(csv_url, sep=',')
         
-        # 2. [진단] 시스템이 실제 인식한 컬럼이 무엇인지 화면에 띄움
-        # 이 코드를 넣으면 오류가 났을 때 어떤 컬럼을 찾고 있는지 화면에 바로 뜹니다.
-        st.write("--- 현재 시스템이 인식한 컬럼 목록 ---")
-        st.write(data.columns.tolist()) 
-        st.write("------------------------------------")
+        # 2. [강제 해결책] 만약 데이터가 뭉쳐서 들어온다면, 아래처럼 컬럼명을 강제로 지정합니다.
+        # 시트의 A, B, C, D, E 순서대로 이름을 할당합니다.
+        data.columns = ['레벨', '한국어이름', '영어이름', '5월', '6월']
         
-        # 3. 필수 컬럼 확인 (없으면 여기서 멈추고 정확한 이유를 보여줌)
-        if '레벨' not in data.columns or '한국어이름' not in data.columns:
-            st.error("오류: 시트 헤더에 '레벨' 또는 '한국어이름'이 정확히 존재하지 않습니다.")
-            st.stop()
-            
+        # 3. 그 후, 데이터 정제 수행
         data = data.dropna(subset=['레벨', '한국어이름'])
         return data
         
