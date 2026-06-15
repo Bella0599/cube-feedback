@@ -19,26 +19,33 @@ st.divider()
 sheet_url = "https://docs.google.com/spreadsheets/d/1xwfmM8VELPoMktF7pZugYZxSbf8SCSGo2Ur7DIFCT9E/edit?usp=sharing"
 
 @st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
-    def load_students_data(url):
-        csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
-        data = pd.read_csv(csv_url)
-        
-        # 1. 컬럼명 앞뒤 공백 제거
-        data.columns = data.columns.str.strip()
-        
-        # 2. [강제 설정] 파이썬이 제목을 못 찾으면, 그냥 0번째 열을 '레벨', 1번째 열을 '한국어이름'으로 강제 지정합니다.
-        # 시트의 A열이 레벨, B열이 한국어이름인 것을 코드에 직접 박아버리는 방식입니다.
-        if len(data.columns) >= 2:
-            data = data.rename(columns={data.columns[0]: '레벨', data.columns[1]: '한국어이름'})
-            
-        # 3. 만약 이름이 여전히 안 맞으면 화면에 알려줌
-        if '레벨' not in data.columns or '한국어이름' not in data.columns:
-            st.error(f"오류: 컬럼명이 안 맞습니다. 현재 인식된 컬럼: {data.columns.tolist()}")
-            st.stop()
-            
-        data = data.dropna(subset=['레벨', '한국어이름'])
-        return data
-        
+def load_students_data(url):
+    csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
+    data = pd.read_csv(csv_url)
+    data.columns = data.columns.str.strip()  # 컬럼명 공백 제거
+    return data
+    
+@st.cache_data(show_spinner="구글 시트에서 교재 학습목표 DB를 동기화 중입니다...")
+def load_books_data(url):
+    try:
+        csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=books"
+        book_df = pd.read_csv(csv_url)
+        book_df.columns = book_df.columns.str.strip()
+        book_df['교재'] = book_df['교재'].astype(str).str.strip()
+        book_df['유닛'] = book_df['유닛'].astype(str).str.strip()
+        book_df['학습목표'] = book_df['학습목표'].astype(str).str.strip()
+        return book_df
+    except:
+        return pd.DataFrame(columns=['교재', '유닛', '학습목표'])
+
+# 여기서 데이터를 불러옵니다. (여기부터는 들여쓰기가 없습니다)
+try:
+    df = load_students_data(sheet_url)
+    df_books = load_books_data(sheet_url)
+    df = df.dropna(subset=['레벨', '한국어이름'])
+except Exception as e:
+    st.error(f"구글 시트 연결 오류: {e}")
+    st.stop()        
     @st.cache_data(show_spinner="구글 시트에서 교재 학습목표 DB를 동기화 중입니다...")
     def load_books_data(url):
         try:
