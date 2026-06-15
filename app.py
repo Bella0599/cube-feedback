@@ -18,18 +18,20 @@ st.divider()
 sheet_url = "https://docs.google.com/spreadsheets/d/1xwfmM8VELPoMktF7pZugYZxSbf8SCSGo2Ur7DIFCT9E/edit?usp=sharing"
 
 try:
-    @st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
+   @st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
     def load_students_data(url):
         csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
         
-        # 1. 데이터를 불러올 때 구분자가 쉼표(,)임을 명시적으로 알려줍니다.
-        data = pd.read_csv(csv_url, sep=',')
+        # 1. 쉼표(,)를 기준으로 데이터를 명확히 분리하여 읽어옵니다. (header=0은 첫 줄을 제목으로 쓴다는 뜻)
+        data = pd.read_csv(csv_url, sep=',', header=0)
         
-        # 2. [강제 해결책] 만약 데이터가 뭉쳐서 들어온다면, 아래처럼 컬럼명을 강제로 지정합니다.
-        # 시트의 A, B, C, D, E 순서대로 이름을 할당합니다.
-        data.columns = ['레벨', '한국어이름', '영어이름', '5월', '6월']
+        # 2. 컬럼명 앞뒤 공백 제거
+        data.columns = data.columns.str.strip()
         
-        # 3. 그 후, 데이터 정제 수행
+        # 💡 디버깅: 레벨에 어떤 값들이 들어있는지 확인 (화면에 출력됨)
+        # st.write("확인된 레벨 목록:", data['레벨'].unique()) 
+        
+        # 3. 데이터 정제
         data = data.dropna(subset=['레벨', '한국어이름'])
         return data
         
