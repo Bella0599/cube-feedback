@@ -9,7 +9,7 @@ st.markdown("지정된 3개의 룸(Mint_room, Blue_room, Pink_room)에서 최신
 EXCEL_URL = "https://docs.google.com/spreadsheets/d/1Om-TrhkCmuPNwdwj1S420SXeGr_pPQuA3pOwtI0orPM/export?format=xlsx"
 
 # 대상 룸 고정
-TARGET_ROOMS = ["Mint_room", "Blue_room", "Pink_room"]
+TARGET_ROOMS = ["Mint_Room", "Blue_Room", "Pink_Room"]
 
 @st.cache_data(ttl=20) 
 def load_target_rooms(url):
