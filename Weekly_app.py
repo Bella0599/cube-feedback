@@ -6,7 +6,7 @@ st.set_page_config(page_title="주간 리포트 자동 발송 시스템", page_i
 st.title("📋 주간 리포트 자동 복사기")
 st.markdown("지정된 3개의 룸(Mint_room, Blue_room, Pink_room)에서 최신 리포트(V열)를 불러옵니다.")
 
-EXCEL_URL = "https://docs.google.com/spreadsheets/d/1Om-TrhkCmuPNwdwj1S420SXeGr_pPQuA3pOwtI0orPM/export?format=xlsx"
+EXCEL_URL = "https://docs.google.com/spreadsheets/d/1DxGvm9hSX8I3AtkH0oOzzpcJFyJFYYs05R7vll6mqjE/edit?usp=sharing"
 
 # 대상 룸 고정
 TARGET_ROOMS = ["Mint_Room", "Blue_Room", "Pink_Room"]
