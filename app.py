@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="큐브어학원 피드백 시스템", page_icon="🏫", layout="centered")
+st.set_page_config(page_title="월말평가", page_icon="🏫", layout="centered")
 
 st.markdown("""
     <style>
