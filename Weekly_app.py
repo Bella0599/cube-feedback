@@ -1,18 +1,27 @@
 import streamlit as st
 import pandas as pd
+import requests
+import io
 
 st.set_page_config(page_title="주간 리포트 자동 발송 시스템", page_icon="📋", layout="centered")
 
 st.title("📋 주간 리포트 자동 복사기")
 st.markdown("구글 시트의 탭과 컬럼을 자동으로 분석하여 최신 리포트를 주르륵 나열합니다.")
 
+# 구글 시트 주소
 EXCEL_URL = "https://docs.google.com/spreadsheets/d/1DxGvm9hSX8I3AtkH0oOzzpcJFyJFYYs05R7vll6mqjE/export?format=xlsx"
 
 @st.cache_data(ttl=20) 
 def load_data(url):
-    excel_file = pd.ExcelFile(url, engine='openpyxl')
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
+    response = requests.get(url, headers=headers)
     
-    # 🌟 핵심: 코드로 이름을 강제하지 않고, 시트에 있는 모든 탭 이름을 자동으로 가져옵니다.
+    if b"html" in response.content[:150].lower() or b"sign in" in response.content[:500].lower():
+        raise PermissionError("구글 시트의 공유 권한이 '링크가 있는 모든 사용자(뷰어)'로 설정되어 있는지 꼭 확인해 주세요.")
+        
+    excel_file = pd.ExcelFile(io.BytesIO(response.content), engine='openpyxl')
     sheet_names = excel_file.sheet_names
     result = {}
     
@@ -34,17 +43,17 @@ if st.button("🔄 구글 시트 최신 내용 즉시 불러오기"):
     st.rerun()
 
 try:
-    with st.spinner('구글 시트 구조 분석 및 데이터 로드 중...'):
+    with st.spinner('구글 시트에서 데이터를 안전하게 불러오는 중...'):
         all_rooms = load_data(EXCEL_URL)
     
     st.sidebar.header("📍 3단계 필터 선택")
     
-    # 1단계: 자동으로 가져온 시트 탭 목록을 선택지에 보여줍니다.
     available_rooms = list(all_rooms.keys())
     
     if not available_rooms:
-        st.error("구글 시트에서 탭을 찾지 못했습니다.")
+        st.error("구글 시트에서 유효한 탭을 찾지 못했습니다.")
     else:
+        # 1단계: 룸 선택
         selected_room = st.sidebar.selectbox("🚪 1단계: 룸(Room) 선택", available_rooms)
         
         df = all_rooms[selected_room]
@@ -82,37 +91,39 @@ try:
             if not col_report:
                 col_report = df.columns[22] if len(df.columns) > 22 else df.columns[-1]
 
-        week_list = sorted(df[col_week].dropna().unique().astype(str))
-        week_list = [w for w in week_list if w.lower() != 'nan' and w.strip() != ""]
+        # 🌟 2단계: 요청하신 대로 1주차~5주차 목록을 화면에 고정합니다.
+        fixed_weeks = ["1주차", "2주차", "3주차", "4주차", "5주차"]
+        selected_week = st.sidebar.selectbox("📅 2단계: 주차 선택", fixed_weeks)
         
-        if not week_list:
-            st.warning(f"⚠️ '{selected_room}'의 주차 열에 입력된 데이터가 없습니다.")
-        else:
-            selected_week = st.sidebar.selectbox("📅 2단계: 주차 선택", week_list)
+        # 시트에 '4주차' 혹은 '4주'라고 적혀있어도 둘 다 잡히도록 '차'를 떼고 검사합니다.
+        search_keyword = selected_week.replace("차", "").strip()
+        df_week = df[df[col_week].astype(str).str.contains(search_keyword, na=False)]
+        
+        # 3단계: 반 선택
+        class_list = df_week[col_level].dropna().unique()
+        selected_class = st.sidebar.selectbox("🎯 3단계: 반 선택", class_list)
+        
+        if selected_class:
+            final_df = df_week[df_week[col_level] == selected_class]
             
-            df_week = df[df[col_week].astype(str) == selected_week]
-            class_list = df_week[col_level].dropna().unique()
-            selected_class = st.sidebar.selectbox("🎯 3단계: 반 선택", class_list)
-            
-            if selected_class:
-                final_df = df_week[df_week[col_level] == selected_class]
-                
-                st.success(f"✅ **[{selected_week} / {selected_room} / {selected_class}]** 리포트 자동 추출 완료 (총 {len(final_df)}명)")
-                st.divider()
+            st.success(f"✅ **[{selected_week} / {selected_room} / {selected_class}]** 리포트 자동 추출 완료 (총 {len(final_df)}명)")
+            st.divider()
 
-                displayed_count = 0
-                for index, row in final_df.iterrows():
-                    report_text = row[col_report]
-                    if pd.notna(report_text) and str(report_text).strip() != "" and str(report_text).lower() != "nan":
-                        kor_name = row[col_kor] if pd.notna(row[col_kor]) else ""
-                        eng_name = row[col_eng] if pd.notna(row[col_eng]) else "이름없음"
-                        
-                        st.subheader(f"🧑‍🎓 {eng_name} ({kor_name})")
-                        st.code(str(report_text), language='text')
-                        displayed_count += 1
-                        
-                if displayed_count == 0:
-                    st.info("💡 선택하신 주차와 반에는 작성된 리포트 내용이 없거나 매칭되지 않았습니다.")
+            displayed_count = 0
+            for index, row in final_df.iterrows():
+                report_text = row[col_report]
+                if pd.notna(report_text) and str(report_text).strip() != "" and str(report_text).lower() != "nan":
+                    kor_name = row[col_kor] if pd.notna(row[col_kor]) else ""
+                    eng_name = row[col_eng] if pd.notna(row[col_eng]) else "이름없음"
+                    
+                    st.subheader(f"🧑‍🎓 {eng_name} ({kor_name})")
+                    st.code(str(report_text), language='text')
+                    displayed_count += 1
+                    
+            if displayed_count == 0:
+                st.info(f"💡 {selected_week} {selected_class} 반에는 작성된 리포트 내용이 없습니다.")
 
+except PermissionError as pe:
+    st.error(f"🔓 권한 오류: {pe}")
 except Exception as e:
     st.error(f"데이터를 불러오는 중 오류가 발생했습니다.\n오류 내용: {e}")
