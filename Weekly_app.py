@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import io
+import re
 
 st.set_page_config(page_title="주간 리포트", page_icon="📋", layout="centered")
 st.title("📋 주간 리포트 자동 복사기")
@@ -92,15 +93,38 @@ try:
                 st.success(f"✅ {selected_week} / {selected_room} / {selected_class} (총 {len(final_df)}명)")
                 st.divider()
 
+                # 🌟 [자동 통일 마법 코드] 이 반의 과목별 최대 만점(분모)을 스캔합니다.
+                class_max_scores = {}
+                for text in final_df[col_report].dropna().astype(str):
+                    found_scores = re.findall(r'([A-Za-z가-힣]+\s*[A-Za-z가-힣]*)\s*(\d+)/(\d+)', text)
+                    for subject, score, denom in found_scores:
+                        subject = subject.strip()
+                        # 출석은 건드리지 않고 건너뜁니다!
+                        if "출석" in subject or "Att" in subject: 
+                            continue
+                        
+                        max_val = max(int(score), int(denom))
+                        if subject not in class_max_scores:
+                            class_max_scores[subject] = max_val
+                        else:
+                            class_max_scores[subject] = max(class_max_scores[subject], max_val)
+
+                # 스캔한 만점을 기준으로 아이들 리포트 글자를 교정하여 출력합니다.
                 displayed_count = 0
                 for _, row in final_df.iterrows():
-                    report_text = row[col_report]
-                    if pd.notna(report_text) and str(report_text).strip() and str(report_text).lower() != "nan":
+                    report_text = str(row[col_report])
+                    if pd.notna(report_text) and report_text.strip() and report_text.lower() != "nan":
                         kor_name = row[col_kor] if pd.notna(row[col_kor]) else ""
                         eng_name = row[col_eng] if pd.notna(row[col_eng]) else "이름없음"
                         
+                        # 분모 강제 통일 작업
+                        corrected_text = report_text
+                        for subject, max_score in class_max_scores.items():
+                            pattern = rf'({subject})\s*(\d+)/\d+'
+                            corrected_text = re.sub(pattern, rf'\1 \2/{max_score}', corrected_text)
+                            
                         st.subheader(f"🧑‍🎓 {eng_name} ({kor_name})")
-                        st.code(str(report_text), language='text')
+                        st.code(corrected_text, language='text')
                         displayed_count += 1
                         
                 if displayed_count == 0:
