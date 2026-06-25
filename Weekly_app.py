@@ -16,7 +16,6 @@ def load_data(url):
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
     response = requests.get(url, headers=headers)
-    
     if b"html" in response.content[:150].lower() or b"sign in" in response.content[:500].lower():
         raise PermissionError("구글 시트 공유 권한을 '링크가 있는 모든 사용자(뷰어)'로 설정해 주세요.")
         
@@ -50,20 +49,23 @@ try:
     if not available_rooms:
         st.error("구글 시트에서 지정된 룸 탭을 찾을 수 없습니다.")
     else:
+        # 1. 룸 선택
         selected_room = st.sidebar.selectbox("🚪 1. 룸 선택", available_rooms)
         df = all_rooms[selected_room]
         
-        col_week, col_level, col_kor, col_eng, col_report = None, None, None, None, None
+        col_week, col_time, col_level, col_kor, col_eng, col_report = None, None, None, None, None, None
 
         for col in df.columns:
             c_str = str(col).strip().lower()
             if 'report' in c_str or '리포트' in c_str: col_report = col
             elif '주차' in c_str or 'week' in c_str: col_week = col
+            elif 'time' in c_str or '시간' in c_str or '시' in c_str: col_time = col
             elif 'level' in c_str or '레벨' in c_str or 'class' in c_str: col_level = col
             elif '(k)' in c_str or '한글' in c_str: col_kor = col
             elif '(e)' in c_str or '영어' in c_str: col_eng = col
 
         col_week = col_week or df.columns[0]
+        col_time = col_time or (df.columns[1] if len(df.columns) > 1 else df.columns[0])
         col_level = col_level or (df.columns[2] if len(df.columns) > 2 else df.columns[0])
         col_kor = col_kor or (df.columns[3] if len(df.columns) > 3 else df.columns[0])
         col_eng = col_eng or (df.columns[4] if len(df.columns) > 4 else df.columns[0])
@@ -75,41 +77,40 @@ try:
                     break
             col_report = col_report or (df.columns[22] if len(df.columns) > 22 else df.columns[-1])
 
+        # 2. 주차 선택
         fixed_weeks = ["1주차", "2주차", "3주차", "4주차", "5주차"]
         selected_week = st.sidebar.selectbox("📅 2. 주차 선택", fixed_weeks)
-        
         search_keyword = selected_week.replace("차", "").strip()
         df_week = df[df[col_week].astype(str).str.contains(search_keyword, na=False)]
         
-        class_list = df_week[col_level].dropna().unique()
+        # 3. 시간 선택 (원장님 요청 사항 반영)
+        fixed_times = ["2시", "3시", "4시", "5시", "6시"]
+        selected_time = st.sidebar.selectbox("⏰ 3. 시간 선택", fixed_times)
+        search_time = selected_time.replace("시", "").strip()
+        df_time = df_week[df_week[col_time].astype(str).str.contains(search_time, na=False)]
+        
+        # 4. 반 선택
+        class_list = df_time[col_level].dropna().unique()
         
         if len(class_list) == 0:
-            st.sidebar.warning("데이터가 없습니다.")
+            st.sidebar.warning("해당 시간에 개설된 반이 없습니다.")
         else:
-            selected_class = st.sidebar.selectbox("🎯 3. 반 선택", class_list)
+            selected_class = st.sidebar.selectbox("🎯 4. 반 선택", class_list)
             
             if selected_class:
-                final_df = df_week[df_week[col_level] == selected_class]
-                st.success(f"✅ {selected_week} / {selected_room} / {selected_class} (총 {len(final_df)}명)")
+                final_df = df_time[df_time[col_level] == selected_class]
+                st.success(f"✅ {selected_week} / {selected_room} / {selected_time} / {selected_class} (총 {len(final_df)}명)")
                 st.divider()
 
-                # 🌟 [자동 통일 마법 코드] 이 반의 과목별 최대 만점(분모)을 스캔합니다.
                 class_max_scores = {}
                 for text in final_df[col_report].dropna().astype(str):
                     found_scores = re.findall(r'([A-Za-z가-힣]+\s*[A-Za-z가-힣]*)\s*(\d+)/(\d+)', text)
                     for subject, score, denom in found_scores:
                         subject = subject.strip()
-                        # 출석은 건드리지 않고 건너뜁니다!
-                        if "출석" in subject or "Att" in subject: 
-                            continue
-                        
+                        if "출석" in subject or "att" in subject: continue
                         max_val = max(int(score), int(denom))
-                        if subject not in class_max_scores:
-                            class_max_scores[subject] = max_val
-                        else:
-                            class_max_scores[subject] = max(class_max_scores[subject], max_val)
+                        class_max_scores[subject] = max(class_max_scores.get(subject, 0), max_val)
 
-                # 스캔한 만점을 기준으로 아이들 리포트 글자를 교정하여 출력합니다.
                 displayed_count = 0
                 for _, row in final_df.iterrows():
                     report_text = str(row[col_report])
@@ -117,7 +118,6 @@ try:
                         kor_name = row[col_kor] if pd.notna(row[col_kor]) else ""
                         eng_name = row[col_eng] if pd.notna(row[col_eng]) else "이름없음"
                         
-                        # 분모 강제 통일 작업
                         corrected_text = report_text
                         for subject, max_score in class_max_scores.items():
                             pattern = rf'({subject})\s*(\d+)/\d+'
