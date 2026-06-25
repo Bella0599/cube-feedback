@@ -17,36 +17,36 @@ st.divider()
 # --- 1. 구글 시트 데이터 불러오기 ---
 sheet_url = "https://docs.google.com/spreadsheets/d/1xwfmM8VELPoMktF7pZugYZxSbf8SCSGo2Ur7DIFCT9E/edit?usp=sharing" 
 
-try:
-    @st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
-    def load_student_data(url):
-        csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
-        data = pd.read_csv(csv_url)
-        data = data.dropna(subset=['레벨', '한국어이름'])
-        return data
+@st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
+def load_student_data(url):
+    csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
+    data = pd.read_csv(csv_url)
+    data = data.dropna(subset=['레벨', '한국어이름'])
+    return data
         
-    @st.cache_data(show_spinner="구글 시트에서 교재 학습목표 DB를 동기화 중입니다...")
-    def load_book_data(url):
-        try:
-            csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=books"
-            book_df = pd.read_csv(csv_url)
-            book_df['교재'] = book_df['교재'].astype(str).str.strip()
-            book_df['유닛'] = book_df['유닛'].astype(str).str.strip()
-            book_df['학습목표'] = book_df['학습목표'].astype(str).str.strip()
-            return book_df
-        except:
-            return pd.DataFrame(columns=['교재', '유닛', '학습목표'])
+@st.cache_data(show_spinner="구글 시트에서 교재 학습목표 DB를 동기화 중입니다...")
+def load_book_data(url):
+    try:
+        csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=books"
+        book_df = pd.read_csv(csv_url)
+        book_df['교재'] = book_df['교재'].astype(str).str.strip()
+        book_df['유닛'] = book_df['유닛'].astype(str).str.strip()
+        book_df['학습목표'] = book_df['학습목표'].astype(str).str.strip()
+        return book_df
+    except:
+        return pd.DataFrame(columns=['교재', '유닛', '학습목표'])
 
+try:
     df = load_student_data(sheet_url)
     df_books = load_book_data(sheet_url)
-except:
-    st.error("구글 시트 연결을 기다리고 있습니다. 시트 주소 및 탭 이름(students, books)을 확인해 주세요.")
+except Exception as e:
+    st.error(f"구글 시트 연결 에러가 발생했습니다. 권한 및 탭 이름을 확인하세요: {e}")
     st.stop()
 
 if "generated_feedback" not in st.session_state:
     st.session_state.generated_feedback = ""
 
-# --- 💡 2. 데이터 및 템플릿 정의 ---
+# --- 2. 데이터 및 템플릿 정의 ---
 PHONICS_BOOKS = ["Jungle Phonics 1", "Jungle Phonics 2", "Jungle Phonics 3", "Jungle Phonics 4"]
 BOOK1_LIST = ["Wonderful World B1", "Wonderful World B2", "Wonderful World B3", "Wonderful World B4", "English Trophy 3","English Trophy 4","English Trophy 5","English Trophy 6", "Reading Trophy 1", "Reading Trophy 2", "Reading Trophy 3"]
 BOOK2_LIST = ["Writing Monster 1", "Bricks Grammar B1", "Bricks Grammar 1"]
@@ -71,7 +71,6 @@ UNDERSTAND_TEXTS = {"상 (Excellent)": "새로운 언어적 개념과 핵심 논
 PRESENT_TEXTS = {"상 (Excellent)": "질문에 대한 발표와 참여도가 적극적이며, 자신감 넘치는 목소리로 반 전체 수업 분위기를 주도합니다.", "중 (Good)": "선생님의 질문에 성실하게 답변하며, 자신에게 주어진 학습 역할을 무리 없이 잘 수행해냅니다.", "하 (Needs Effort)": "내용을 알고 있더라도 발표 시 다소 수줍어하는 경향이 있어, 적극성을 끌어올리도록 격려 중입니다."}
 FOCUS_TEXTS = {"상 (Excellent)": "수업 시간 내내 흔들림 없는 높은 몰입도를 보여주며, 지시 사항을 정확하게 이행하는 집중력이 돋보입니다.", "중 (Good)": "기본적인 수업 집중력을 잘 유지하고 있으며, 흐트러짐 없이 강사의 설명에 귀를 기울입니다.", "하 (Needs Effort)": "간혹 집중력이 흐려지는 순간이 관찰되어, 1:1 대면 질문과 밀착 케어를 통해 주의를 환기시키고 있습니다."}
 
-# 💡 [프리미엄 세부 진단 DB - 21.0 업데이트]
 DIAGNOSIS_DB = {
     "Phonics (파닉스)": {
         "유사 알파벳 형태 혼동": "대부분의 알파벳은 잘 인지하고 있으나, 간혹 모양이 비슷한 'b'와 'd', 'p'와 'q'를 헷갈리는 모습이 보입니다. 시각적인 단서나 쓰기 연습을 통해 헷갈리는 알파벳을 정확히 구별하고 내면화할 수 있도록 지도하겠습니다.",
@@ -244,7 +243,6 @@ for category_name, traits in TRAITS_CATEGORIES.items():
 st.subheader("🔍 5. 영역별 보완점 및 큐브 케어 플랜")
 st.caption("학생에게 필요한 맞춤형 피드백을 영역별로 자유롭게 선택해 주세요. (다중 선택 가능)")
 
-# 파닉스와 정규반에 따라 노출되는 탭 목록 차별화
 if is_phonics:
     available_areas = ["Phonics (파닉스)", "General (공통/학습태도)"]
 else:
@@ -354,7 +352,6 @@ if st.button("✨ 큐브어학원 프리미엄 피드백 생성"):
             for area, weaknesses in selected_weaknesses.items():
                 for w in weaknesses:
                     plan = DIAGNOSIS_DB[area][w]
-                    # 완전한 문장으로 출력되도록 포맷팅 변경
                     care_plan_text += f"✔️ [{area} - {w}]\n  {plan}\n\n"
         if not care_plan_text: care_plan_text = f"· 현재 {selected_en_name}(이)는 모든 영역의 밸런스를 예쁘게 유지하고 있습니다.\n"
 
