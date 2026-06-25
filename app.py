@@ -19,28 +19,43 @@ sheet_url = "https://docs.google.com/spreadsheets/d/1xwfmM8VELPoMktF7pZugYZxSbf8
 
 @st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
 def load_student_data(url):
-    csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=students"
+    # 💡 팁 반영: &headers=1 파라미터 추가
+    csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&headers=1&sheet=students"
     data = pd.read_csv(csv_url)
+    
+    # 띄어쓰기 문제 방지를 위해 컬럼명 앞뒤 공백 제거
+    data.columns = data.columns.str.strip()
+    
+    # 디버깅: '레벨'과 '한국어이름' 열이 잘 들어왔는지 확인
+    if '레벨' not in data.columns or '한국어이름' not in data.columns:
+        raise ValueError(f"시트에서 '레벨' 또는 '한국어이름' 열을 찾지 못했습니다. 파이썬이 읽은 첫 줄(제목): {list(data.columns)}")
+        
     data = data.dropna(subset=['레벨', '한국어이름'])
     return data
         
 @st.cache_data(show_spinner="구글 시트에서 교재 학습목표 DB를 동기화 중입니다...")
 def load_book_data(url):
     try:
-        csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&sheet=books"
+        # 💡 팁 반영: &headers=1 파라미터 추가
+        csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&headers=1&sheet=books"
         book_df = pd.read_csv(csv_url)
+        
+        # 띄어쓰기 문제 방지를 위해 컬럼명 앞뒤 공백 제거
+        book_df.columns = book_df.columns.str.strip()
+        
         book_df['교재'] = book_df['교재'].astype(str).str.strip()
         book_df['유닛'] = book_df['유닛'].astype(str).str.strip()
         book_df['학습목표'] = book_df['학습목표'].astype(str).str.strip()
         return book_df
-    except:
+    except Exception as e:
+        st.warning(f"교재 DB를 불러오는 중 문제가 발생했습니다: {e}")
         return pd.DataFrame(columns=['교재', '유닛', '학습목표'])
 
 try:
     df = load_student_data(sheet_url)
     df_books = load_book_data(sheet_url)
 except Exception as e:
-    st.error(f"구글 시트 연결 에러가 발생했습니다. 권한 및 탭 이름을 확인하세요: {e}")
+    st.error(f"구글 시트 연결 에러가 발생했습니다. 권한 및 탭 이름을 확인하세요. (상세 에러: {e})")
     st.stop()
 
 if "generated_feedback" not in st.session_state:
