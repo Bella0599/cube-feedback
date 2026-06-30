@@ -275,11 +275,72 @@ for area in available_areas:
     selected = st.multiselect(f"📌 [{area}] 밀착 케어 항목 선택", list(DIAGNOSIS_DB[area].keys()))
     if selected: selected_weaknesses[area] = selected
 
-# --- 6. 다음 달 진도 및 액션 플랜 ---
+# --- 6. 다음 달 진도 및 액션 플랜 (구글 시트 연동 + 빈칸 자동화) ---
 st.markdown("---")
 st.subheader("🚀 4. 다음 달 안내 및 Next Step")
-next_step_progress = st.text_input("📖 다음 달 주/부교재 진도 안내", placeholder="예: 주교재 Unit 4~6 (과거시제 학습) / 부교재 Unit 2")
-next_step_home = st.text_area("🏠 가정 연계 학습 가이드 (홈케어)", placeholder="예: 다음 달부터 시제가 변형됩니다. 가정에서 단어장 예문 3개씩 소리 내어 읽도록 격려 부탁드립니다.")
+
+# 1) 시스템 자동 생성 멘트 (구글 시트 빈칸일 때 사용할 예비용)
+auto_next_progress = ""
+if primary_units and not is_phonics:
+    try:
+        unit_nums = [int(u.replace("Unit ", "")) for u in primary_units if "Unit" in u]
+        if unit_nums:
+            last_unit = max(unit_nums)
+            if last_unit < 12:
+                auto_next_progress = f"주교재 Unit {last_unit + 1}~{min(last_unit + 3, 12)}"
+            else:
+                auto_next_progress = "다음 레벨 교재 진입"
+    except:
+        auto_next_progress = "개별 진도표 참조"
+elif is_phonics:
+    auto_next_progress = "다음 파닉스 음가 및 규칙 학습"
+
+HOMECARE_DB = {
+    "Phonics": [
+        "다음 달에는 새로운 파닉스 규칙을 배웁니다. 가정에서 오디오 음원이나 챈트를 하루 10분씩 틀어주시면 아이의 귀가 훨씬 빠르게 열립니다.",
+        "파닉스는 잦은 노출과 자신감이 생명입니다. 오늘 배운 알파벳 소리를 집 안의 물건 이름에서 함께 찾아보는 언어 놀이를 적극 추천해 드립니다."
+    ],
+    "Course Book": [
+        "다음 달부터는 조금 더 확장된 시제와 문장 패턴을 다룹니다. 가정에서 단어장 뒤의 예문 3개씩만 아이와 함께 큰 소리로 읽어주시면 학습 효율이 2배가 됩니다.",
+        "회화 교재 특성상 입 밖으로 내뱉는 연습이 중요합니다. 아이가 학원에서 배운 영어 노래나 대화를 뽐낼 때, 폭풍 칭찬과 리액션을 부탁드립니다."
+    ],
+    "Reading": [
+        "다음 달에는 지문의 호흡이 조금 더 길어집니다. 집에서 영어 책을 읽을 때, 해석을 강요하기보다 '어떤 내용인 것 같아?'라고 우리말로 편하게 묻고 답해주세요.",
+        "새로운 어휘량이 늘어나는 시기입니다. 단어를 외울 때 눈으로만 보지 않고 반드시 소리 내어 3번씩 읽도록 가정에서도 지도 부탁드립니다."
+    ]
+}
+
+care_category = "Phonics" if is_phonics else ("Reading" if "Reading" in primary_book else "Course Book")
+auto_homecare = random.choice(HOMECARE_DB.get(care_category, ["학원 과제를 성실히 수행할 수 있도록 가정에서도 많은 격려와 칭찬 부탁드립니다."]))
+
+# 2) 구글 시트 데이터 확인 로직
+sheet_next_progress = ""
+sheet_homecare = ""
+
+if primary_units and df_books is not None and not df_books.empty:
+    # 선택한 평가 단원 중 '마지막 단원'을 기준으로 시트를 검색합니다.
+    last_selected_unit = primary_units[-1]
+    
+    # 띄어쓰기 문제 방지를 위해 양쪽 공백을 제거하고 검색
+    matching_row = df_books[(df_books['교재'] == str(primary_book).strip()) & (df_books['유닛'] == str(last_selected_unit).strip())]
+    
+    if not matching_row.empty:
+        row = matching_row.iloc[0]
+        # 구글 시트에 '다음달진도' 열이 있고, 값이 비어있지 않다면 가져옵니다.
+        if '다음달진도' in row and pd.notna(row['다음달진도']) and str(row['다음달진도']).strip() != "nan":
+            sheet_next_progress = str(row['다음달진도']).strip()
+            
+        # 구글 시트에 '가정연계학습' 열이 있고, 값이 비어있지 않다면 가져옵니다.
+        if '가정연계학습' in row and pd.notna(row['가정연계학습']) and str(row['가정연계학습']).strip() != "nan":
+            sheet_homecare = str(row['가정연계학습']).strip()
+
+# 3) 우선순위 결정: 구글 시트 값 우선 ➔ 없으면 자동 생성 멘트 적용
+final_next_progress = sheet_next_progress if sheet_next_progress else auto_next_progress
+final_homecare = sheet_homecare if sheet_homecare else auto_homecare
+
+# 4) UI 출력
+next_step_progress = st.text_input("📖 다음 달 주/부교재 진도 안내", value=final_next_progress, placeholder="예: 주교재 Unit 4~6 (과거시제 학습)")
+next_step_home = st.text_area("🏠 가정 연계 학습 가이드 (홈케어)", value=final_homecare, placeholder="가정에서 지도해주실 내용을 적어주세요.")
 
 # --- 7. 선생님 코멘트 ---
 st.markdown("---")
