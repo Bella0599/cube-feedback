@@ -11,7 +11,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🏫 큐브어학원 월말평가 시스템 v22.0")
+st.title("🏫 큐브어학원 월말평가 시스템 v22.1 (완성본)")
 st.markdown("구글 시트 연동형 교재 DB 및 프리미엄 밀착 피드백 엔진 (실속형)")
 st.divider()
 
@@ -21,12 +21,17 @@ sheet_url = "https://docs.google.com/spreadsheets/d/1xwfmM8VELPoMktF7pZugYZxSbf8
 @st.cache_data(show_spinner="구글 시트에서 학생 명단을 연결 중입니다...")
 def load_student_data(url):
     csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&headers=1&sheet=students"
-    data = pd.read_csv(csv_url)
-    data.columns = data.columns.str.strip()
-    if '레벨' not in data.columns or '한국어이름' not in data.columns:
-        raise ValueError(f"시트에서 '레벨' 또는 '한국어이름' 열을 찾지 못했습니다.")
-    data = data.dropna(subset=['레벨', '한국어이름'])
-    return data
+    try:
+        data = pd.read_csv(csv_url)
+        data.columns = data.columns.str.strip()
+        if '레벨' not in data.columns or '한국어이름' not in data.columns:
+            st.error("⚠️ students 탭에서 '레벨' 또는 '한국어이름' 열을 찾을 수 없습니다.")
+            return pd.DataFrame(columns=['레벨', '한국어이름', '영어이름'])
+        data = data.dropna(subset=['레벨', '한국어이름'])
+        return data
+    except Exception as e:
+        st.error(f"⚠️ 학생 명단 연결 오류: {e}")
+        return pd.DataFrame(columns=['레벨', '한국어이름', '영어이름'])
         
 @st.cache_data(show_spinner="구글 시트에서 교재 학습목표 DB를 동기화 중입니다...")
 def load_book_data(url):
@@ -34,25 +39,31 @@ def load_book_data(url):
         csv_url = url.split("/edit")[0] + "/gviz/tq?tqx=out:csv&headers=1&sheet=books"
         book_df = pd.read_csv(csv_url)
         book_df.columns = book_df.columns.str.strip()
+        
+        # '유닛' 열이 없으면 에러가 나지 않도록 방어 로직 추가
+        if '교재' not in book_df.columns or '유닛' not in book_df.columns or '학습목표' not in book_df.columns:
+            st.warning(f"⚠️ books 탭의 열 이름이 맞지 않습니다. 현재 인식된 열: {list(book_df.columns)}")
+            return pd.DataFrame(columns=['교재', '유닛', '학습목표'])
+            
         book_df['교재'] = book_df['교재'].astype(str).str.strip()
         book_df['유닛'] = book_df['유닛'].astype(str).str.strip()
         book_df['학습목표'] = book_df['학습목표'].astype(str).str.strip()
         return book_df
     except Exception as e:
-        st.warning(f"교재 DB 연결 오류: {e}")
+        st.warning(f"⚠️ 교재 DB 연결 오류: {e}")
         return pd.DataFrame(columns=['교재', '유닛', '학습목표'])
 
-try:
-    df = load_student_data(sheet_url)
-    df_books = load_book_data(sheet_url)
-except Exception as e:
-    st.error(f"구글 시트 연결 에러가 발생했습니다. (상세 에러: {e})")
+df = load_student_data(sheet_url)
+df_books = load_book_data(sheet_url)
+
+if df.empty:
+    st.error("데이터를 불러오지 못했습니다. 구글 시트 권한 및 탭 이름을 다시 확인해 주세요.")
     st.stop()
 
 if "generated_feedback" not in st.session_state:
     st.session_state.generated_feedback = ""
 
-# --- 2. 데이터 및 템플릿 정의 (전문성 & 랜덤화) ---
+# --- 2. 데이터 및 템플릿 정의 ---
 PHONICS_BOOKS = ["Jungle Phonics 1", "Jungle Phonics 2", "Jungle Phonics 3", "Jungle Phonics 4"]
 BOOK1_LIST = ["Wonderful World B1", "Wonderful World B2", "Wonderful World B3", "Wonderful World B4", "English Trophy 3","English Trophy 4","English Trophy 5","English Trophy 6", "Reading Trophy 1", "Reading Trophy 2", "Reading Trophy 3"]
 BOOK2_LIST = ["Writing Monster 1", "Bricks Grammar B1", "Bricks Grammar 1"]
@@ -66,7 +77,7 @@ PHONICS_TARGETS_DB = {
     "Jungle Phonics 4": ["bl", "cl", "fl", "pl", "gl", "sl", "br", "cr", "fr", "pr", "gr", "tr", "sm", "sn", "sp", "st", "sw", "ch", "sh", "th", "wh"] 
 }
 
-# 태도 멘트 다변화 (리스트형)
+# 태도 멘트 다변화
 UNDERSTAND_TEXTS = {
     "상 (Excellent)": [
         "새로운 언어적 개념을 직관적으로 흡수하며, 배운 내용을 자신의 언어로 재구성해 내는 뛰어난 이해력을 보여줍니다.",
@@ -124,6 +135,7 @@ TRAITS_CATEGORIES = {
     ]
 }
 
+# 🚨 에러의 원인이었던 DIAGNOSIS_DB (Writing 포함 완벽 복구)
 DIAGNOSIS_DB = {
     "Phonics (파닉스)": {
         "유사 알파벳 형태 혼동": "모양이 비슷한 'b/d', 'p/q' 등의 구별에 시각적 단서를 추가하여 정확히 내면화할 수 있도록 지도하고 있습니다.",
@@ -145,6 +157,11 @@ DIAGNOSIS_DB = {
         "규칙의 실전 적용": "이해한 문법 개념을 다양한 변형 문제에 직접 대입해 보며, 머리로 아는 것을 실전 감각으로 연결하는 훈련을 진행합니다.",
         "잦은 실수 오답 교정": "문법의 뼈대는 잘 잡혀 있으나 특정 규칙에서 발생하는 반복적인 자잘한 실수를 줄이기 위해 밀착 오답 교정을 실시합니다.",
         "복합 문장 확장": "기본 규칙을 활용하여 길이가 길고 복잡한 문장 구조도 유연하게 분석하고 영작할 수 있도록 심화 대비를 진행합니다."
+    },
+   "Writing (영작)": {
+        "단어 정확성": "의미는 잘 알고 있으나 영작 시 간혹 철자(스펠링) 오류가 관찰됩니다. 자신이 쓴 단어를 꼼꼼히 확인하고 정확하게 쓰는 연습을 통해 쓰기의 기본기를 탄탄히 다지고 있습니다.",
+        "문법 규칙에 맞게 문장 쓰기": "배운 문법 규칙(어순, 수 일치, 시제 등)을 정확하게 적용하여 바른 문장으로 완성해 내는 훈련을 집중적으로 진행 중입니다.",
+        "마무리와 자기 검수": "문장을 다 쓴 후 대소문자, 마침표, 철자 등을 스스로 점검하는 꼼꼼한 마무리 습관을 기르도록 지도합니다."
     },
     "General (공통/학습태도)": {
         "문제 해결 끈기 부족": "어려운 문제 앞에서 멈추기보다, 스스로 아는 선까지 끝까지 풀어보려는 도전 의식을 심어주기 위해 작은 칭찬과 성취를 독려합니다.",
@@ -235,7 +252,7 @@ else:
         if sub_book != "선택안함": sub_score = st.text_input("부교재 점수", placeholder="예: 80")
         else: sub_score = ""
 
-# --- 5. 상세 성취도 및 보완점 (실속형 UI) ---
+# --- 5. 상세 성취도 및 보완점 ---
 st.markdown("---")
 st.subheader("🎯 3. 수업 태도 및 성취 진단")
 col5, col6, col7 = st.columns(3)
@@ -248,15 +265,17 @@ for category_name, traits in TRAITS_CATEGORIES.items():
     selected = st.multiselect(category_name, traits)
     selected_traits.extend(selected)
 
-if is_phonics: available_areas = ["Phonics (파닉스)", "General (공통/학습태도)"]
-else: available_areas = ["Course Book (코스북/회화)", "Reading (독해/리딩)", "Grammar (문법)", "Writing (영작)", "General (공통/학습태도)"]
+if is_phonics: 
+    available_areas = ["Phonics (파닉스)", "General (공통/학습태도)"]
+else: 
+    available_areas = ["Course Book (코스북/회화)", "Reading (독해/리딩)", "Grammar (문법)", "Writing (영작)", "General (공통/학습태도)"]
 
 selected_weaknesses = {}
 for area in available_areas:
     selected = st.multiselect(f"📌 [{area}] 밀착 케어 항목 선택", list(DIAGNOSIS_DB[area].keys()))
     if selected: selected_weaknesses[area] = selected
 
-# --- 6. 다음 달 진도 및 액션 플랜 (신규 추가) ---
+# --- 6. 다음 달 진도 및 액션 플랜 ---
 st.markdown("---")
 st.subheader("🚀 4. 다음 달 안내 및 Next Step")
 next_step_progress = st.text_input("📖 다음 달 주/부교재 진도 안내", placeholder="예: 주교재 Unit 4~6 (과거시제 학습) / 부교재 Unit 2")
@@ -269,7 +288,7 @@ selected_template = st.selectbox("마법의 코멘트 템플릿", list(TEACHER_T
 teacher_custom_feedback = st.text_area("추가 개별 코멘트 (선택)", placeholder="여기에 작성된 내용은 템플릿 멘트 뒤에 자연스럽게 이어집니다.")
 selected_closing = st.selectbox("클로징 안내 멘트", list(CLOSING_MENT_DB.keys()))
 
-# --- 8. 피드백 메세지 생성 로직 (실속형 포맷팅) ---
+# --- 8. 피드백 메세지 생성 로직 ---
 if st.button("✨ 큐브어학원 월말평가 리포트 생성"):
     if not selected_student or not primary_units:
         st.error("학생 및 평가 단원을 정확히 선택해 주세요.")
